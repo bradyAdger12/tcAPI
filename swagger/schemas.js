@@ -155,24 +155,36 @@ const schemas = {
         "type": "string",
         "default": ""
       },
-      "geom": {
-        "type": "json",
-        "default": "{}"
+      "length": {
+        "type": "integer",
+        "default": "null"
+      },
+      "hr_effort": {
+        "type": "integer",
+        "default": "null"
       },
       "source": {
         "type": "string",
-        "default": ""
+        "default": "null"
       },
       "source_id": {
         "type": "string",
-        "default": ""
+        "default": "null"
       },
-      "source_activity_id": {
-        "type": "string",
-        "default": "{}"
+      "duration": {
+        "type": "integer",
+        "default": "null"
+      },
+      "started_at": {
+        "type": "date",
+        "default": "null"
+      },
+      "stopped_at": {
+        "type": "date",
+        "default": "null"
       }
     }
-  }
+  },
 }
 
 module.exports = schemas

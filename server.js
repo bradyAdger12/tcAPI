@@ -42,6 +42,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/users', require('./controllers/users_controller'))
+app.use('/recordings', require('./controllers/recordings_controller'))
 app.use('/strava', require('./controllers/strava_controller'))
 
 const port = process.env.PORT || 8080

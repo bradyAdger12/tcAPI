@@ -8,19 +8,14 @@ const polyline = require('@mapbox/polyline')
 const axios = require('axios')
 
 // Recordings routes
+
 /**
  * @swagger
  * 
- * /recordings/create:
- *  post:
+ * /recordings/me:
+ *  get:
  *    tags: [Recordings]
- *    summary: Create a new recoring
- *    requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/createRecording'
+ *    summary: Get all recordings for authenticated user
  *    responses:
  *      '200':
  *          description: A successful response
@@ -31,48 +26,57 @@ const axios = require('axios')
  *      default:
  *          description: Generic server error
  */
-router.post('/create', middleware.authenticateToken, async (req, res) => {
-  console.log(req.actor)
-  const actor = req.actor
-  const name = req.body.name
-  const geometry = req.body.geom
-  const source = req.body.source
-  // const source_activity_id = req.body.source_activity_id
+ router.get('/me', middleware.authenticateToken, async (req, res) => {
   try {
-    // console.log(geojson)
-    const response = await axios.get('https://www.strava.com/api/v3/activities/6829582940/streams?keys=heartrate,latlng&series_type=time', { headers: { 'Authorization': 'Bearer 96721f55aca96bffcf2ea3f6a3f265be83443eb1' } })
-    const data = response.data
-    let heartrate = data.find((element) => {
-      return element.type == 'heartrate'
+    const actorId = req.actor.id
+    const recording = await Recording.findAll({
+      where: {
+        user_id: actorId
+      }
     })
-    heartrate = heartrate.data
-    hrr = []
-    heartrate.forEach((value) => {
-      hrr.push((value - 47) / (204 - 47))
+    res.json(recording)
+  } catch (e) {
+    res.status(500).json({ message: e.message })
+  }
+})
+
+
+/**
+ * @swagger
+ * 
+ * /recordings/{id}:
+ *  get:
+ *    tags: [Recordings]
+ *    summary: Get a recording by ID
+ *    parameters:
+ *      - name: id
+ *        in: path
+ *        required: true
+ *        description: ID of the recording
+ *        schema:
+ *           type: integer
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+router.get('/:id', middleware.authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id
+    const recording = await Recording.findOne({
+      where: {
+        id: id
+      }
     })
-    console.log(hrr)
-    // const hours
-    // for (var i = 0; i < heartrate.length; i++) {
-    //   sum += heartrate[i]
-    //   if (i == 3600) break;
-    // }
-
-
-
-    console.log((sum / heartrate.length) / 174)
-
-    // if (!name) throw Error('Name is required')
-    // if (!geometry) throw Error('Geometry is required')
-    // if (!source) throw Error('Source is required')
-    // if (!source_activity_id) throw Error('Source Activity ID is required')
-    // const recording = await Recording.create({
-    //   name: name,
-    //   geom: geometry,
-    //   user_id: actor.id,
-    //   source: source,
-    //   source_activity_id: source_activity_id
-    // })
-    // return res.json(recording)
+    if (!recording) {
+      return res.status(404).json({ message: 'Recording could not be found.' })
+    }
+    res.json(recording)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }
