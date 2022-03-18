@@ -39,16 +39,16 @@ User.init({
   email: { type: Sequelize.STRING, allowNull: false },
   display_name: { type: Sequelize.STRING, allowNull: false },
   gender: Sequelize.STRING,
-  hr_zones: Sequelize.ARRAY(Sequelize.INTEGER),
-  power_zones: Sequelize.ARRAY(Sequelize.INTEGER),
+  hr_zones: { type: Sequelize.ARRAY(Sequelize.INTEGER), defaultValue: [] },
+  power_zones: { type: Sequelize.ARRAY(Sequelize.INTEGER), defaultValue: [] },
   max_hr: Sequelize.INTEGER,
   resting_hr: Sequelize.INTEGER,
   threshold_hr: Sequelize.INTEGER,
   threshold_power: Sequelize.INTEGER,
   strava_token: Sequelize.STRING,
   garmin_token: Sequelize.STRING,
-  strava_enable_auto_sync: Sequelize.BOOLEAN,
-  garmin_enable_auto_sync: Sequelize.BOOLEAN
+  strava_enable_auto_sync: { type: Sequelize.BOOLEAN, defaultValue: false },
+  garmin_enable_auto_sync: { type: Sequelize.BOOLEAN, defaultValue: false }
 }, {
   // Other model options go here
   sequelize, // We need to pass the connection instance

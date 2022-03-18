@@ -29,12 +29,12 @@ const axios = require('axios')
  router.get('/me', middleware.authenticateToken, async (req, res) => {
   try {
     const actorId = req.actor.id
-    const recording = await Recording.findAll({
+    const recordings = await Recording.findAll({
       where: {
         user_id: actorId
       }
     })
-    res.json(recording)
+    res.json(recordings)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }

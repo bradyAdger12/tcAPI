@@ -7,22 +7,48 @@ const { sequelize } = require('../models/recording')
 const polyline = require('@mapbox/polyline')
 const axios = require('axios')
 
-// Strava routes
-router.get('/authorize', async (req, res) => {
-  try {
-    console.log(process.env.STRAVA_CLIENT_ID)
-    const response = await axios.get(`https://www.strava.com/oauth/authorize?client_id=${process.env.STRAVA_CLIENT_ID}&response_type=code&redirect_uri=http://localhost:8080/strava/get_code&approval_prompt=auto&scope=activity:read`)
-    res.send(response.data)
-  } catch (e) {
-    res.status(500).json({ message: e.message })
-  }
-})
 
-router.get('/token', async (req, res) => {
+
+
+
+/**
+ * @swagger
+ * 
+ * /strava/activities:
+ *  get:
+ *    tags: [Strava]
+ *    summary: Get all activities for strava athlete
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+
+router.get('/activities', middleware.authenticateToken, async (req, res) => {
+  const actor = req.actor
+  const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
   try {
-    const response = await axios.post(`https://www.strava.com/oauth/token?client_id=${process.env.STRAVA_CLIENT_ID}&client_secret=${process.env.STRAVA_CLIENT_SECRET}&code=940bfe72dfae3fb1e0c12bf74d67994425415498&grant_type=authorization_code`)
-    console.log(response.data)
+    const activityResponse = await axios.get(`https://www.strava.com/api/v3/athlete/activities`, headers)
+    const data = activityResponse.data
+    const filteredData = []
+    for (activity of data) {
+      const id = activity.id.toString()
+      const recording = await Recording.findOne({
+        where: { source_id: id }
+      })
+      if (recording) {
+        activity.isImported = true
+      }
+      filteredData.push(activity)
+    }
+    res.json(filteredData)
   } catch (e) {
+    console.log(e)
     res.status(500).json({ message: e.message })
   }
 })
@@ -70,17 +96,16 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
 
     //Assign values from response
     name = data.name
-    duration = data.moving_time
+    duration = Math.round(data.moving_time)
     source_id = data.id.toString()
     length = Math.round(data.distance)
     startDate = new Date(data.start_date_local)
     stoppedDate = new Date(startDate.toString())
     activity = data.type?.toLowerCase()
-    console.log(typeof source_id)
     stoppedDate.setSeconds(startDate.getSeconds() + duration)
-    console.log(data)
     if (data.has_heartrate) {
       hrtss = await Recording.findHRTSS(actor, id, headers)
+      hrtss = Math.round(hrtss * 100)
     }
 
     //Check if recording already exists in DB
@@ -98,7 +123,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     const newRecording = await Recording.create({
       name: name,
       length: length,
-      hr_effort: hrtss * 100,
+      hr_effort: hrtss,
       source: 'strava',
       activity: activity,
       source_id: source_id,

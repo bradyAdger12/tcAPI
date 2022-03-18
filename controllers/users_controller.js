@@ -100,16 +100,36 @@ router.put('/update/me', middleware.authenticateToken, async (req, res) => {
   try {
     const user = await User.findOne({ where: { id: actor.id } })
     if (user) {
-      user.display_name = req.body.display_name
-      user.hr_zones = req.body.hr_zones
-      user.power_zones = req.body.power_zones
-      user.max_hr = req.body.max_hr
-      user.threshold_hr = req.body.threshold_hr
-      user.threshold_power = req.body.threshold_power
-      user.strava_token = req.body.strava_token
-      user.garmin_token = req.body.garmin_token
-      user.strava_enable_auto_sync = req.body.strava_enable_auto_sync
-      user.garmin_enable_auto_sync = req.body.garmin_enable_auto_sync
+      if (req.body.display_name) {
+        user.display_name = req.body.display_name
+      }
+      if (req.body.hr_zones) {
+        user.hr_zones = req.body.hr_zones
+      }
+      if (req.body.power_zones) {
+        user.power_zones = req.body.power_zones
+      }
+      if (req.body.max_hr) {
+        user.max_hr = req.body.max_hr
+      }
+      if (req.body.threshold_hr) {
+        user.threshold_hr = req.body.threshold_hr
+      }
+      if (req.body.threshold_power) {
+        user.threshold_power = req.body.threshold_power
+      }
+      if (req.body.strava_token) {
+        user.strava_token = req.body.strava_token
+      }
+      if (req.body.garmin_token) {
+        user.garmin_token = req.body.garmin_token
+      }
+      if (req.body.strava_enable_auto_sync) {
+        user.strava_enable_auto_sync = req.body.strava_enable_auto_sync
+      }
+      if (req.body.garmin_enable_auto_sync) {
+        user.garmin_enable_auto_sync = req.body.garmin_enable_auto_sync
+      }
       const updatedUser = await user.save()
       return res.json(User.formatUser(updatedUser))
     }
@@ -177,7 +197,6 @@ router.delete('/delete/me', middleware.authenticateToken, async (req, res) => {
 router.post('/login', async (req, res) => {
   const email = req.body.email
   const password = req.body.password
-  console.log(email)
   try {
     if (!email) {
       throw Error('Email is required.')
