@@ -34,12 +34,7 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
 
 
   try {
-    const user = await User.findOne({
-      where: {
-        id: actor.id
-      }
-    })
-    const headers = { headers: { 'Authorization': 'Bearer ' + user.strava_token } }
+    const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
     const activityResponse = await axios.get(`https://www.strava.com/api/v3/athlete/activities`, headers)
     const data = activityResponse.data
     const filteredData = []
@@ -54,6 +49,38 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
       filteredData.push(activity)
     }
     res.json(filteredData)
+  } catch (e) {
+    console.log(e)
+    res.status(500).json({ message: e.message })
+  }
+})
+
+
+/**
+ * @swagger
+ * 
+ * /strava/activities:
+ *  get:
+ *    tags: [Strava]
+ *    summary: Get strava athlete
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+
+ router.get('/athlete', middleware.authenticateToken, async (req, res) => {
+  const actor = req.actor
+  try {
+    const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
+    const athleteResponse = await axios.get(`https://www.strava.com/api/v3/athlete`, headers)
+    const data = athleteResponse.data
+    res.json(data)
   } catch (e) {
     console.log(e)
     res.status(500).json({ message: e.message })
@@ -90,12 +117,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
   const actor = req.actor
 
   try {
-    let user = await User.findOne({
-      where: {
-        id: actor.id
-      }
-    })
-    const headers = { headers: { 'Authorization': 'Bearer ' + user.strava_token } }
+    const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
     let name = null
     let duration = null
     let length = null
