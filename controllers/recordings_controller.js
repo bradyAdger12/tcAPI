@@ -6,8 +6,37 @@ const middleware = require('../middleware')
 const { sequelize } = require('../models/recording')
 const polyline = require('@mapbox/polyline')
 const axios = require('axios')
+const data = require('../stream_data.js')
 
 // Recordings routes
+
+
+
+/**
+ * @swagger
+ * 
+ * /recordings/stats/test:
+ *  get:
+ *    tags: [Recordings]
+ *    summary: Test recording stream data
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+ router.get('/stats/test', async (req, res) => {
+  try {
+    const stats = Recording.getStats(data)
+    res.json(stats)
+  } catch (e) {
+    res.status(500).json({ message: e.message })
+  }
+})
 
 /**
  * @swagger
@@ -80,6 +109,48 @@ router.get('/:id', middleware.authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Recording could not be found.' })
     }
     res.json(recording)
+  } catch (e) {
+    res.status(500).json({ message: e.message })
+  }
+})
+
+/**
+ * @swagger
+ * 
+ * /recordings/{id}:
+ *  delete:
+ *    tags: [Recordings]
+ *    summary: Delete a recording by ID
+ *    parameters:
+ *      - name: id
+ *        in: path
+ *        required: true
+ *        description: ID of the recording to delete
+ *        schema:
+ *           type: integer
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+ router.delete('/:id', middleware.authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id
+    const recording = await Recording.findOne({
+      where: {
+        id: id
+      }
+    })
+    if (!recording) {
+      return res.status(404).json({ message: 'Recording could not be found.' })
+    }
+    await recording.destroy()
+    res.json({ success: true })
   } catch (e) {
     res.status(500).json({ message: e.message })
   }

@@ -127,7 +127,9 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     let stoppedDate = null
     let source_id = null
     let activity = null
+    let stats = null
     const activityResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}`, headers)
+    const streamResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}/streams?key_by_type=time&keys=heartrate,watts`, headers)
     const data = activityResponse.data
 
     //Assign values from response
@@ -139,11 +141,14 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     stoppedDate = new Date(startDate.toString())
     activity = data.type?.toLowerCase()
     stoppedDate.setSeconds(startDate.getSeconds() + duration)
-    if (data.weighted_average_watts && user.threshold_power) {
-      tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / user.threshold_power)) / (user.threshold_power * 3600))) * 100)
+    if (streamResponse.data) {
+      stats = Recording.getStats(streamResponse.data)
     }
-    if (data.has_heartrate) {
-      hrtss = await Recording.findHRTSS(actor, id, headers)
+    if (data.weighted_average_watts && actor.threshold_power) {
+      tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+    }
+    if (data.has_heartrate && streamResponse.data?.heartrate?.data) {
+      hrtss = Recording.findHRTSS(actor, streamResponse.data.heartrate.data)
       hrtss = Math.round(hrtss * 100)
     }
 
@@ -156,7 +161,6 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     if (recording) {
       return res.status(500).json({ message: 'Recording already exists!' })
     }
-    // res.send()
 
     // Create recording entry
     const newRecording = await Recording.create({
@@ -167,6 +171,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
       source: 'strava',
       activity: activity,
       source_id: source_id,
+      stats: stats,
       duration: duration,
       started_at: startDate,
       stopped_at: stoppedDate,
