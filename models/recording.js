@@ -52,6 +52,7 @@ Recording.init({
   user_id: Sequelize.INTEGER,
   geom: { type: Sequelize.GEOMETRY("MultiLineString", 4326) },
   hr_effort: Sequelize.INTEGER,
+  effort: Sequelize.INTEGER,
   started_at: Sequelize.DATE,
   stopped_at: Sequelize.DATE
 }, {

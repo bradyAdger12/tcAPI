@@ -5,6 +5,7 @@ const sequelize = require('../database.js')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const middleware = require('../middleware.js')
+const _ = require('lodash')
 
 
 
@@ -31,7 +32,12 @@ const middleware = require('../middleware.js')
  */
 router.get('/me', middleware.authenticateToken, async (req, res) => {
   const actor = req.actor
-  if (actor) return res.json(User.formatUser(actor))
+  const user = await User.findOne({
+    where: {
+      id: actor.id
+    }
+  })
+  if (actor) return res.json(User.formatUser(user))
 })
 
 /**
@@ -96,38 +102,40 @@ router.get('/:id', middleware.authenticateToken, async (req, res) => {
  *          description: Generic server error
  */
 router.put('/update/me', middleware.authenticateToken, async (req, res) => {
-  const actor = req.actor
+  let actor = req.actor
   try {
-    const user = await User.findOne({ where: { id: actor.id } })
+    let user = await User.findOne({ where: { id: actor.id } })
     if (user) {
-      if (req.body.display_name) {
+      if (_.has(req.body, 'display_name')) {
         user.display_name = req.body.display_name
       }
-      if (req.body.hr_zones) {
+      if (_.has(req.body, 'hr_zones')) {
         user.hr_zones = req.body.hr_zones
       }
-      if (req.body.power_zones) {
+      if (_.has(req.body, 'power_zones')) {
         user.power_zones = req.body.power_zones
       }
-      if (req.body.max_hr) {
+      if (_.has(req.body, 'max_hr')) {
         user.max_hr = req.body.max_hr
       }
-      if (req.body.threshold_hr) {
-        user.threshold_hr = req.body.threshold_hr
+      if (_.has(req.body, 'threshold_hr')) {
+        user.threshold_hr = req.body.threshold_hr && req.body.threshold_hr != '' ? req.body.threshold_hr : null
+        user.hr_zones = User.getHeartRateZones(user.threshold_hr)
       }
-      if (req.body.threshold_power) {
-        user.threshold_power = req.body.threshold_power
+      if (_.has(req.body, 'threshold_power')) {
+        user.threshold_power = req.body.threshold_power && req.body.threshold_power != '' ? req.body.threshold_power : null
+        user.power_zones = User.getPowerZones(user.threshold_power)
       }
-      if (req.body.strava_token) {
+      if (_.has(req.body, 'strava_token')) {
         user.strava_token = req.body.strava_token
       }
-      if (req.body.garmin_token) {
+      if (_.has(req.body, 'garmin_token')) {
         user.garmin_token = req.body.garmin_token
       }
-      if (req.body.strava_enable_auto_sync) {
+      if (_.has(req.body, 'strava_enable_auto_sync')) {
         user.strava_enable_auto_sync = req.body.strava_enable_auto_sync
       }
-      if (req.body.garmin_enable_auto_sync) {
+      if (_.has(req.body, 'garmin_enable_auto_sync')) {
         user.garmin_enable_auto_sync = req.body.garmin_enable_auto_sync
       }
       const updatedUser = await user.save()
@@ -264,6 +272,12 @@ router.post('/register', async (req, res) => {
       throw Error("Email already registered")
     }
     req.body.password = password
+    if (req.body.threshold_hr) {
+      req.body.hr_zones = User.getHeartRateZones(req.body.threshold_hr)
+    }
+    if (req.body.threshold_power) {
+      req.body.power_zones = User.getPowerZones(req.body.threshold_power)
+    }
     const result = await User.create(
       req.body
     );

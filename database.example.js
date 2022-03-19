@@ -1,7 +1,7 @@
 var Sequelize = require('sequelize');
-var sequelize = new Sequelize('cycling_log_dev', 'postgres', 'postgres', {
-  host: '192.168.1.5',
-  dialect: 'postgres'
+var sequelize = new Sequelize('db_name', 'postgres', 'postgres', {
+  host: 'localhost',
+  dialect: 'postgres',
 });
 
 sequelize

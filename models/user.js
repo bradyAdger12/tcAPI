@@ -5,10 +5,26 @@ const Recording = require('./recording.js')
 class User extends Model {
 }
 
+User.getPowerZones = function () {
+  return []
+}
+User.getHeartRateZones = function (thresh_hr) {
+  if (thresh_hr) {
+    return [{ title: 'Recovery', low: 0, high: Math.round(thresh_hr * .68) }, { title: 'Endurance', low: Math.round(thresh_hr * .69), high: Math.round(thresh_hr * .83) }, { title: 'Tempo', low: Math.round(thresh_hr * .84), high: Math.round(thresh_hr * .94) }, { title: 'Threshold', low: Math.round(thresh_hr * .95), high: Math.round(thresh_hr * 1.05) }, { title: 'VO2 Max', low: Math.round(thresh_hr * 1.06), high: 'MAX' }]
+  }
+  return []
+}
+User.getPowerZones = function (thresh_power) {
+  if (thresh_power) {
+    return [{ title: 'Recovery', low: 0, high: Math.round(thresh_power * .54) }, { title: 'Endurance', low: Math.round(thresh_power * .55), high: Math.round(thresh_power * .75) }, { title: 'Tempo', low: Math.round(thresh_power * .76), high: Math.round(thresh_power * .90) }, { title: 'Threshold', low: Math.round(thresh_power * .91), high: Math.round(thresh_power * 1.05) }, { title: 'VO2 Max', low: Math.round(thresh_power * 1.06), high: Math.round(thresh_power * 1.20) }, { title: 'Anaerobic', low: Math.round(thresh_power * 1.20), high: 'MAX' }]
+  }
+  return []
+}
+
 User.formatUser = function (user, actor) {
   try {
     user = user.get({ plain: true })
-  } catch (e) {}
+  } catch (e) { }
 
   //Never return password or email
   delete user.password
@@ -39,8 +55,8 @@ User.init({
   email: { type: Sequelize.STRING, allowNull: false },
   display_name: { type: Sequelize.STRING, allowNull: false },
   gender: Sequelize.STRING,
-  hr_zones: { type: Sequelize.ARRAY(Sequelize.INTEGER), defaultValue: [] },
-  power_zones: { type: Sequelize.ARRAY(Sequelize.INTEGER), defaultValue: [] },
+  hr_zones: { type: Sequelize.JSONB, defaultValue: [] },
+  power_zones: { type: Sequelize.JSONB, defaultValue: [] },
   max_hr: Sequelize.INTEGER,
   resting_hr: Sequelize.INTEGER,
   threshold_hr: Sequelize.INTEGER,

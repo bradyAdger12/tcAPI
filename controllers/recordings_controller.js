@@ -26,10 +26,13 @@ const axios = require('axios')
  *      default:
  *          description: Generic server error
  */
- router.get('/me', middleware.authenticateToken, async (req, res) => {
+router.get('/me', middleware.authenticateToken, async (req, res) => {
   try {
     const actorId = req.actor.id
     const recordings = await Recording.findAll({
+      order: [
+        // Will escape title and validate DESC against a list of valid direction parameters
+        ['started_at', 'DESC']],
       where: {
         user_id: actorId
       }

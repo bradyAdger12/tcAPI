@@ -31,8 +31,15 @@ const axios = require('axios')
 
 router.get('/activities', middleware.authenticateToken, async (req, res) => {
   const actor = req.actor
-  const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
+
+
   try {
+    const user = await User.findOne({
+      where: {
+        id: actor.id
+      }
+    })
+    const headers = { headers: { 'Authorization': 'Bearer ' + user.strava_token } }
     const activityResponse = await axios.get(`https://www.strava.com/api/v3/athlete/activities`, headers)
     const data = activityResponse.data
     const filteredData = []
@@ -81,12 +88,19 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
 router.post('/activity/:id/import', middleware.authenticateToken, async (req, res) => {
   const id = req.params.id
   const actor = req.actor
-  const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
+
   try {
+    let user = await User.findOne({
+      where: {
+        id: actor.id
+      }
+    })
+    const headers = { headers: { 'Authorization': 'Bearer ' + user.strava_token } }
     let name = null
     let duration = null
     let length = null
     let hrtss = null
+    let tss = null
     let startDate = null
     let stoppedDate = null
     let source_id = null
@@ -103,6 +117,9 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     stoppedDate = new Date(startDate.toString())
     activity = data.type?.toLowerCase()
     stoppedDate.setSeconds(startDate.getSeconds() + duration)
+    if (data.weighted_average_watts && user.threshold_power) {
+      tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / user.threshold_power)) / (user.threshold_power * 3600))) * 100)
+    }
     if (data.has_heartrate) {
       hrtss = await Recording.findHRTSS(actor, id, headers)
       hrtss = Math.round(hrtss * 100)
@@ -124,6 +141,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
       name: name,
       length: length,
       hr_effort: hrtss,
+      effort: tss,
       source: 'strava',
       activity: activity,
       source_id: source_id,
