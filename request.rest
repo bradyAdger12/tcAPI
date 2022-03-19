@@ -1,0 +1,30 @@
+# GET http://localhost:8080/users/me
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzAsInBhc3N3b3JkIjoiJDJiJDEwJElVOUlyb1hxbk5wL2hwN0kwdmYuVE9ML1RZVFZZT3lWRnU3b3g5RVpxYjRtTTlENG43dG5tIiwiZW1haWwiOiJicmFkeS5hZGdlcjFAZ21haWwuY29tIiwiZGlzcGxheV9uYW1lIjoiQnJhZHkgQWRnZXIiLCJocl96b25lcyI6WzAsMTIwLDE0NSwxNTgsMTc0LDE4NF0sInBvd2VyX3pvbmVzIjpudWxsLCJtYXhfaHIiOm51bGwsInRocmVzaG9sZF9ociI6bnVsbCwidGhyZXNob2xkX3Bvd2VyIjpudWxsLCJzdHJhdmFfaWQiOm51bGwsImdhcm1pbl9pZCI6bnVsbCwic3RyYXZhX2VuYWJsZV9hdXRvX3N5bmMiOm51bGwsImdhcm1pbl9lbmFibGVfYXV0b19zeW5jIjpudWxsLCJjcmVhdGVkQXQiOiIyMDIyLTAzLTE3VDA0OjIxOjI5LjY0MloiLCJ1cGRhdGVkQXQiOiIyMDIyLTAzLTE3VDA0OjIxOjI5LjY0MloiLCJpYXQiOjE2NDc0NTc4NzN9.damNlC0d84KeHQjeEuzGsumGSDeVlY-0vrDqrOUyg0Q
+
+GET http://localhost:8080/users/29
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MzAsInBhc3N3b3JkIjoiJDJiJDEwJElVOUlyb1hxbk5wL2hwN0kwdmYuVE9ML1RZVFZZT3lWRnU3b3g5RVpxYjRtTTlENG43dG5tIiwiZW1haWwiOiJicmFkeS5hZGdlcjFAZ21haWwuY29tIiwiZGlzcGxheV9uYW1lIjoiQnJhZHkgQWRnZXIiLCJocl96b25lcyI6WzAsMTIwLDE0NSwxNTgsMTc0LDE4NF0sInBvd2VyX3pvbmVzIjpudWxsLCJtYXhfaHIiOm51bGwsInRocmVzaG9sZF9ociI6bnVsbCwidGhyZXNob2xkX3Bvd2VyIjpudWxsLCJzdHJhdmFfaWQiOm51bGwsImdhcm1pbl9pZCI6bnVsbCwic3RyYXZhX2VuYWJsZV9hdXRvX3N5bmMiOm51bGwsImdhcm1pbl9lbmFibGVfYXV0b19zeW5jIjpudWxsLCJjcmVhdGVkQXQiOiIyMDIyLTAzLTE3VDA0OjIxOjI5LjY0MloiLCJ1cGRhdGVkQXQiOiIyMDIyLTAzLTE3VDA0OjIxOjI5LjY0MloiLCJpYXQiOjE2NDc0NTY0MjV9.UXQJ8zg1wWlZGwcyk3SUB8ii1FS-DYHXPwFDcK1Nj-M
+
+# POST http://localhost:8080/users/register
+# Content-Type: application/json
+
+# {
+#     "display_name": "Brady Adger",
+#     "email": "brady.adger1@gmail.com",
+#     "password": "foobar",
+#     "hr_zones": [
+#         0,
+#         120,
+#         145,
+#         158,
+#         174,
+#         184
+#     ]
+# }
+
+# POST http://localhost:8080/users/login
+# Content-Type: application/json
+
+# {
+#     "email": "brady.adger1@gmail.com",
+#     "password": "foobar"
+# }
