@@ -44,7 +44,7 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
         where: { source_id: id }
       })
       if (recording) {
-        activity.isImported = true
+        activity.trackId = recording.id
       }
       filteredData.push(activity)
     }

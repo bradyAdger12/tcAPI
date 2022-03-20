@@ -98,6 +98,7 @@ Recording.getStats = function (stream, hrZones, powerZones) {
         '20min': 0,
         '10min': 0,
         '5min': 0,
+        'max': 0
       },
       'hasWatts': false,
       'watts': {
@@ -108,7 +109,8 @@ Recording.getStats = function (stream, hrZones, powerZones) {
         '2min': 0,
         '1min': 0,
         '30sec': 0,
-        '5sec': 0
+        '5sec': 0,
+        'max': 0
       }
     }
   }
@@ -185,6 +187,16 @@ Recording.getStats = function (stream, hrZones, powerZones) {
       if ((i + 5) < listLength) {
         if (watts.length == listLength) {
           buildStats(stats, watts, 'watts', i, 5, '5sec')
+        }
+      }
+
+      //max
+      if (i + 1 < listLength) {
+        if (watts.length == listLength) {
+          buildStats(stats, watts, 'watts', i, 1, 'max')
+        }
+        if (heartrate.length == listLength) {
+          buildStats(stats, heartrate, 'heartrate', i, 1, 'max')
         }
       }
     }
