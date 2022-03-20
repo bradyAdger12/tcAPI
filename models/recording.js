@@ -4,37 +4,112 @@ const _ = require('lodash')
 class Recording extends Model {
 }
 
-buildStats = function (stats, list, listName, i, seconds, timeSliceName) {
-  const timeSlice = list.slice(i, seconds + i)
-  const sum = _.sum(timeSlice)
-  const average = sum / timeSlice.length
-  if (average > stats[listName][timeSliceName]) {
-    stats[listName][timeSliceName] = Math.round(average)
+buildZoneDistribution = function (watts, heartrate, hrZones, powerZones, stats) {
+  const listLength = watts.length || heartrate.length
+
+  //Determine if watts and or heart rate is present. Add to stats
+  if (watts && watts.length > 0) {
+    stats.zones.hasWatts = true
+  } if (heartrate && heartrate.length > 0) {
+    stats.zones.hasHeartRate = true
+  }
+  for (var i = 0; i < listLength; i++) {
+
+    //Get watt seconds for particular zones
+    if (watts.length > 0 && powerZones) {
+      const value = _.find(powerZones, (item) => {
+        return watts[i] >= item.low && (watts[i] <= item.high || item.title == 'Anaerobic')
+      })
+      if (value) {
+        stats.zones[value.title]['watt-seconds'] += 1
+        stats.zones[value.title]['watt-percentage'] = Math.round((stats.zones[value.title]['watt-seconds'] / listLength) * 100) / 100
+      }
+    }
+
+    //Get hr seconds for particular zones
+    if (heartrate.length > 0 && hrZones) {
+      const value = _.find(hrZones, (item) => {
+        return heartrate[i] >= item.low && (heartrate[i] <= item.high || item.title == 'VO2 Max')
+      })
+      if (value) {
+        stats.zones[value.title]['hr-seconds'] += 1
+        stats.zones[value.title]['hr-percentage'] = Math.round((stats.zones[value.title]['hr-seconds'] / listLength) * 100) / 100
+      }
+    }
   }
 }
 
-Recording.getStats = function (stream) {
+buildStats = function (stats, list, listName, i, seconds, timeSliceName) {
+  const timeSlice = list.slice(i, seconds + i) //slice hr/watt array by time range
+  const sum = _.sum(timeSlice) // sum that time range
+  const average = sum / timeSlice.length // get average of time range
+  if (average > stats.bests[listName][timeSliceName]) {  // if the averaged time range is greater than what is present, replace.
+    stats.bests[listName][timeSliceName] = Math.round(average)
+  }
+}
+
+Recording.getStats = function (stream, hrZones, powerZones) {
   const heartrate = stream.heartrate?.data ?? []
   const watts = stream.watts?.data ?? []
   const listLength = heartrate.length
   const stats = {
-    'hasHeartRate': false,
-    'heartrate': {
-      '1hr': 0,
-      '20min': 0,
-      '10min': 0,
-      '5min': 0,
+    'zones': {
+      'hasWatts': false,
+      'hasHeartRate': false,
+      'Recovery': {
+        'hr-percentage': 0,
+        'watt-percentage': 0,
+        'hr-seconds': 0,
+        'watt-seconds': 0
+      },
+      'Endurance': {
+        'hr-percentage': 0,
+        'watt-percentage': 0,
+        'hr-seconds': 0,
+        'watt-seconds': 0
+      },
+      'Tempo': {
+        'hr-percentage': 0,
+        'watt-percentage': 0,
+        'hr-seconds': 0,
+        'watt-seconds': 0
+      },
+      'Threshold': {
+        'hr-percentage': 0,
+        'watt-percentage': 0,
+        'hr-seconds': 0,
+        'watt-seconds': 0
+      },
+      'VO2 Max': {
+        'hr-percentage': 0,
+        'watt-percentage': 0,
+        'hr-seconds': 0,
+        'watt-seconds': 0
+      },
+      'Anaerobic': {
+        'watt-percentage': 0,
+        'watt-seconds': 0
+      },
     },
-    'hasWatts': false,
-    'watts': {
-      '1hr': 0,
-      '20min': 0,
-      '10min': 0,
-      '5min': 0,
-      '2min': 0,
-      '1min': 0,
-      '30sec': 0,
-      '5sec': 0
+    'bests': {
+      'hasHeartRate': false,
+      'heartrate': {
+        '1hr': 0,
+        '20min': 0,
+        '10min': 0,
+        '5min': 0,
+      },
+      'hasWatts': false,
+      'watts': {
+        '1hr': 0,
+        '20min': 0,
+        '10min': 0,
+        '5min': 0,
+        '2min': 0,
+        '1min': 0,
+        '30sec': 0,
+        '5sec': 0
+      }
     }
   }
   if (watts.length > 0) {
@@ -42,9 +117,9 @@ Recording.getStats = function (stream) {
   } if (heartrate.length > 0) {
     stats.hasHeartRate = true
   }
+  buildZoneDistribution(watts, heartrate, hrZones, powerZones, stats)
   try {
     for (let i = 0; i < listLength; i++) {
-
       //1hr
       if ((i + 3600) < listLength) {
         if (watts.length == listLength) {

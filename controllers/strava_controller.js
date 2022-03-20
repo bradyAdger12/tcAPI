@@ -142,7 +142,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     activity = data.type?.toLowerCase()
     stoppedDate.setSeconds(startDate.getSeconds() + duration)
     if (streamResponse.data) {
-      stats = Recording.getStats(streamResponse.data)
+      stats = Recording.getStats(streamResponse.data, actor.hr_zones, actor.power_zones)
     }
     if (data.weighted_average_watts && actor.threshold_power) {
       tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)

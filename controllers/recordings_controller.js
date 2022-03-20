@@ -31,7 +31,14 @@ const data = require('../stream_data.js')
  */
  router.get('/stats/test', async (req, res) => {
   try {
-    const stats = Recording.getStats(data)
+    const user = await User.findOne({
+      where: {
+        id: 34
+      }
+    })
+    const hrZones = user.hr_zones
+    const powerZones = user.power_zones
+    const stats = Recording.getStats(data, hrZones, powerZones)
     res.json(stats)
   } catch (e) {
     res.status(500).json({ message: e.message })
