@@ -118,7 +118,7 @@ Recording.getStats = function (stream, hrZones, powerZones) {
   const heartrate = stream.heartrate?.data ?? []
   const watts = stream.watts?.data ?? []
   const listLength = heartrate.length
-  const stats = statsOject
+  const stats = Recording.statsObject()
   if (watts.length > 0) {
     stats.hasWatts = true
   } if (heartrate.length > 0) {

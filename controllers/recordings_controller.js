@@ -51,6 +51,19 @@ router.get('/stats/test', async (req, res) => {
  *  get:
  *    tags: [Recordings]
  *    summary: Get all recordings for authenticated user
+ *    parameters:
+ *      - name: startDate
+ *        in: path
+ *        required: false
+ *        description: startDate filter
+ *        schema:
+ *           type: Date
+ *      - name: endDate
+ *        in: path
+ *        required: false
+ *        description: startDate filter
+ *        schema:
+ *           type: endDate
  *    responses:
  *      '200':
  *          description: A successful response
@@ -63,14 +76,27 @@ router.get('/stats/test', async (req, res) => {
  */
 router.get('/me', middleware.authenticateToken, async (req, res) => {
   try {
+    const startsAt = req.query.startsAt
+    const endsAt = req.query.endsAt
     const actorId = req.actor.id
+    console.log(startsAt)
+    const where = {
+      user_id: actorId
+    }
+    if (startsAt && endsAt) {
+      where[
+        "started_at"] = {
+        [Op.and]: {
+          [Op.gte]: startsAt,
+          [Op.lte]: endsAt
+        }
+      }
+    }
     const recordings = await Recording.findAll({
       order: [
         // Will escape title and validate DESC against a list of valid direction parameters
         ['started_at', 'DESC']],
-      where: {
-        user_id: actorId
-      }
+      where
     })
     res.json(recordings)
   } catch (e) {
@@ -141,10 +167,8 @@ router.get('/me/stats', middleware.authenticateToken, async (req, res) => {
   try {
     const actor = req.actor
     const today = moment()
-    const starts_at = moment().set({ 'year': today.year(), 'month': today.month(), 'date': today.date() - (today.day() - 1), 'hour': 0, 'minute': 0, 'second': 0, 'millisecond': 0 });
-    const ends_at = moment().set({ 'year': today.year(), 'month': today.month(), 'date': today.date() + (7 - today.day()), 'hour': 23, 'minute': 59, 'second': 59, 'millisecond': 59 });
-    starts_at.subtract(7, 'days')
-    ends_at.subtract(7, 'days')
+    const starts_at = moment().set({ 'year': today.year(), 'month': today.month(), 'date': 1, 'hour': 0, 'minute': 0, 'second': 0, 'millisecond': 0 });
+    const ends_at = moment().set({ 'year': today.year(), 'month': today.month(), 'date': today.daysInMonth(), 'hour': 23, 'minute': 59, 'second': 59, 'millisecond': 59 });
     let effort = 0
     let duration = 0
     let length = 0
