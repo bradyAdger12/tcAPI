@@ -4,8 +4,10 @@ const express = require('express')
 const router = express.Router()
 const middleware = require('../middleware')
 const data = require('../stream_data.js')
+const _ = require('lodash')
 const { Op } = require('sequelize')
 const moment = require('moment')
+const { sum } = require('../models/recording')
 
 // Recordings routes
 
@@ -98,7 +100,122 @@ router.get('/me', middleware.authenticateToken, async (req, res) => {
         ['started_at', 'DESC']],
       where
     })
-    res.json(recordings)
+    const formattedRecordings = []
+    for (let recording of recordings) {
+      formattedRecordings.push(_.omit(recording.toJSON(), ['stats', 'createdAt', 'updatedAt', 'source', 'source_id', 'geom']))
+    }
+    res.json(formattedRecordings)
+  } catch (e) {
+    res.status(500).json({ message: e.message })
+  }
+})
+
+/**
+ * @swagger
+ * 
+ * /recordings/me/calendar:
+ *  get:
+ *    tags: [Recordings]
+ *    summary: Get all recordings for authenticated user
+ *    parameters:
+ *      - name: startDate
+ *        in: path
+ *        required: false
+ *        description: startDate filter
+ *        schema:
+ *           type: Date
+ *      - name: endDate
+ *        in: path
+ *        required: false
+ *        description: startDate filter
+ *        schema:
+ *           type: endDate
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
+  try {
+    const startsAt = req.query.startsAt
+    const endsAt = req.query.endsAt
+    const actorId = req.actor.id
+    const where = {
+      user_id: actorId
+    }
+    if (startsAt && endsAt) {
+      where[
+        "started_at"] = {
+        [Op.and]: {
+          [Op.gte]: startsAt,
+          [Op.lte]: endsAt
+        }
+      }
+    }
+    const recordings = await Recording.findAll({
+      order: [
+        // Will escape title and validate DESC against a list of valid direction parameters
+        ['started_at', 'ASC']],
+      where
+    })
+    const currentDate = moment(startsAt)
+    const endDate = moment(endsAt)
+    endDate.add(1, 'day')
+    const dates = []
+    let summary = {
+      'effort': 0,
+      'hrEffort': 0,
+      'duration': 0,
+      'distance': 0,
+      'fitness': 0,
+      'fatigue': 0,
+      'form': 0
+    }
+    const summaries = []
+    while (currentDate.format('D MMMM YYYY') != endDate.format('D MMMM YYYY')) {
+      const tracks = _.filter(recordings, (recording) => {
+        return moment(recording.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
+      })
+      for (const track of tracks) {
+        summary['effort'] += track.effort
+        summary['hrEffort'] += track.hr_effort
+        summary['duration'] += track.duration
+        summary['distance'] += track.length
+      }
+      if (currentDate.day() == 0) {
+        summary['fitness'] = await Recording.getFitness(currentDate)
+        summary['fatigue'] = await Recording.getFatigue(currentDate)
+        summary['form'] = Math.round(summary['fitness'] - summary['fatigue'])
+
+        summaries.push(summary)
+        summary = {
+          'effort': 0,
+          'hrEffort': 0,
+          'duration': 0,
+          'distance': 0,
+          'fitness': 0,
+          'fatigue': 0,
+          'form': 0
+        }
+      }
+      dates.push({
+        date: currentDate.toISOString(),
+        tracks: tracks
+      })
+
+      currentDate.add(1, 'day')
+    }
+    let index = 7
+    for (let summary of summaries) {
+      dates.splice(index, 0, { summary })
+      index += 7 + 1
+    }
+    res.json({ dates })
   } catch (e) {
     res.status(500).json({ message: e.message })
   }

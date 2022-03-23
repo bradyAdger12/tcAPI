@@ -31,11 +31,13 @@ const axios = require('axios')
 
 router.get('/activities', middleware.authenticateToken, async (req, res) => {
   const actor = req.actor
+  const page = req.query.page ?? 1
+  const per_page = req.query.per_page ?? 30
 
 
   try {
     const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
-    const activityResponse = await axios.get(`https://www.strava.com/api/v3/athlete/activities`, headers)
+    const activityResponse = await axios.get(`https://www.strava.com/api/v3/athlete/activities?per_page=${per_page}&page=${page}`, headers)
     const data = activityResponse.data
     const filteredData = []
     for (activity of data) {
@@ -59,7 +61,7 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
 /**
  * @swagger
  * 
- * /strava/activities:
+ * /strava/athlete:
  *  get:
  *    tags: [Strava]
  *    summary: Get strava athlete

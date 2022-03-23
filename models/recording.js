@@ -1,6 +1,7 @@
 const sequelize = require('../database.js')
-const { Sequelize, Model } = require('sequelize');
+const { Sequelize, Model, Op } = require('sequelize');
 const _ = require('lodash')
+const moment = require('moment')
 class Recording extends Model {
 }
 
@@ -68,6 +69,56 @@ Recording.statsObject = function () {
       }
     }
   }
+}
+
+Recording.getFitness = async function (date) {
+  const daysToInclude = 42
+  const start = moment(date.toString()).subtract(daysToInclude, 'days')
+  let fitness = 0
+  const recordings = await Recording.findAll({
+    where: {
+      "started_at": {
+        [Op.and]: {
+          [Op.gte]: start,
+          [Op.lte]: date
+        }
+      }
+    }
+  })
+  for (const recording of recordings) {
+    if (recording.effort) {
+      fitness += recording.effort
+    } else if (recording.hr_effort) {
+      fitness += recording.hr_effort
+    }
+  }
+  fitness = fitness / daysToInclude
+  return Math.round(fitness)
+}
+
+Recording.getFatigue = async function (date) {
+  const daysToInclude = 7
+  const start = moment(date.toString()).subtract(daysToInclude, 'days')
+  let fatigue = 0
+  const recordings = await Recording.findAll({
+    where: {
+      "started_at": {
+        [Op.and]: {
+          [Op.gte]: start,
+          [Op.lte]: date
+        }
+      }
+    }
+  })
+  for (const recording of recordings) {
+    if (recording.effort) {
+      fatigue += recording.effort
+    } else if (recording.hr_effort) {
+      fatigue += recording.hr_effort
+    }
+  }
+  fatigue = fatigue / daysToInclude
+  return Math.round(fatigue)
 }
 
 buildZoneDistribution = function (watts, heartrate, hrZones, powerZones, stats) {
