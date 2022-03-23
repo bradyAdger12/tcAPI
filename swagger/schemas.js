@@ -148,8 +148,8 @@ const schemas = {
     }
   },
 
-  //Recording
-  createRecording: {
+  //Workout
+  createWorkout: {
     "properties": {
       "name": {
         "type": "string",

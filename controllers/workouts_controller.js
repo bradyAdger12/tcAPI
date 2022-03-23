@@ -1,4 +1,4 @@
-const Recording = require('../models/recording')
+const Workout = require('../models/workout')
 const User = require('../models/user')
 const express = require('express')
 const router = express.Router()
@@ -7,19 +7,19 @@ const data = require('../stream_data.js')
 const _ = require('lodash')
 const { Op } = require('sequelize')
 const moment = require('moment')
-const { sum } = require('../models/recording')
+const { sum } = require('../models/workout')
 
-// Recordings routes
+// Workouts routes
 
 
 
 /**
  * @swagger
  * 
- * /recordings/stats/test:
+ * /workouts/stats/test:
  *  get:
- *    tags: [Recordings]
- *    summary: Test recording stream data
+ *    tags: [Workouts]
+ *    summary: Test workout stream data
  *    responses:
  *      '200':
  *          description: A successful response
@@ -39,7 +39,7 @@ router.get('/stats/test', async (req, res) => {
     })
     const hrZones = user.hr_zones
     const powerZones = user.power_zones
-    const stats = Recording.getStats(data, hrZones, powerZones)
+    const stats = Workout.getStats(data, hrZones, powerZones)
     res.json(stats)
   } catch (e) {
     res.status(500).json({ message: e.message })
@@ -49,10 +49,10 @@ router.get('/stats/test', async (req, res) => {
 /**
  * @swagger
  * 
- * /recordings/me:
+ * /workouts/me:
  *  get:
- *    tags: [Recordings]
- *    summary: Get all recordings for authenticated user
+ *    tags: [Workouts]
+ *    summary: Get all workouts for authenticated user
  *    parameters:
  *      - name: startDate
  *        in: path
@@ -94,17 +94,17 @@ router.get('/me', middleware.authenticateToken, async (req, res) => {
         }
       }
     }
-    const recordings = await Recording.findAll({
+    const workouts = await Workout.findAll({
       order: [
         // Will escape title and validate DESC against a list of valid direction parameters
         ['started_at', 'DESC']],
       where
     })
-    const formattedRecordings = []
-    for (let recording of recordings) {
-      formattedRecordings.push(_.omit(recording.toJSON(), ['stats', 'createdAt', 'updatedAt', 'source', 'source_id', 'geom']))
+    const formattedWorkouts = []
+    for (let workout of workouts) {
+      formattedWorkouts.push(_.omit(workout.toJSON(), ['stats', 'createdAt', 'updatedAt', 'source', 'source_id', 'geom']))
     }
-    res.json(formattedRecordings)
+    res.json(formattedWorkouts)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }
@@ -113,10 +113,10 @@ router.get('/me', middleware.authenticateToken, async (req, res) => {
 /**
  * @swagger
  * 
- * /recordings/me/calendar:
+ * /workouts/me/calendar:
  *  get:
- *    tags: [Recordings]
- *    summary: Get all recordings for authenticated user
+ *    tags: [Workouts]
+ *    summary: Get all workouts for authenticated user
  *    parameters:
  *      - name: startDate
  *        in: path
@@ -157,7 +157,7 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
         }
       }
     }
-    const recordings = await Recording.findAll({
+    const workouts = await Workout.findAll({
       order: [
         // Will escape title and validate DESC against a list of valid direction parameters
         ['started_at', 'ASC']],
@@ -177,8 +177,8 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
     }
     const summaries = []
     while (currentDate.format('D MMMM YYYY') != endDate.format('D MMMM YYYY')) {
-      const tracks = _.filter(recordings, (recording) => {
-        return moment(recording.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
+      const tracks = _.filter(workouts, (workout) => {
+        return moment(workout.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
       })
       for (const track of tracks) {
         if (track.effort) {
@@ -190,8 +190,8 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
         summary['distance'] += track.length
       }
       if (currentDate.day() == 0) {
-        summary['fitness'] = await Recording.getTrainingLoad(currentDate)
-        summary['fatigue'] = await Recording.getTrainingLoad(currentDate, 7)
+        summary['fitness'] = await Workout.getTrainingLoad(currentDate)
+        summary['fatigue'] = await Workout.getTrainingLoad(currentDate, 7)
         summary['form'] = Math.round(summary['fitness'] - summary['fatigue'])
 
         summaries.push(summary)
@@ -226,15 +226,15 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
 /**
  * @swagger
  * 
- * /recordings/{id}:
+ * /workouts/{id}:
  *  get:
- *    tags: [Recordings]
- *    summary: Get a recording by ID
+ *    tags: [Workouts]
+ *    summary: Get a workout by ID
  *    parameters:
  *      - name: id
  *        in: path
  *        required: true
- *        description: ID of the recording
+ *        description: ID of the workout
  *        schema:
  *           type: integer
  *    responses:
@@ -250,15 +250,15 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
 router.get('/:id', middleware.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id
-    const recording = await Recording.findOne({
+    const workout = await Workout.findOne({
       where: {
         id: id
       }
     })
-    if (!recording) {
-      return res.status(404).json({ message: 'Recording could not be found.' })
+    if (!workout) {
+      return res.status(404).json({ message: 'Workout could not be found.' })
     }
-    res.json(recording)
+    res.json(workout)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }
@@ -267,10 +267,10 @@ router.get('/:id', middleware.authenticateToken, async (req, res) => {
 /**
  * @swagger
  * 
- * /recordings/me/stats:
+ * /workouts/me/stats:
  *  get:
- *    tags: [Recordings]
- *    summary: Get stats for a recording. By default, this is a weekly total
+ *    tags: [Workouts]
+ *    summary: Get stats for a workout. By default, this is a weekly total
  *    responses:
  *      '200':
  *          description: A successful response
@@ -326,7 +326,7 @@ router.get('/me/stats', middleware.authenticateToken, async (req, res) => {
         'watt-seconds': 0
       },
     }
-    const recordings = await Recording.findAll({
+    const workouts = await Workout.findAll({
       where: {
         user_id: actor.id,
         "started_at": {
@@ -337,32 +337,32 @@ router.get('/me/stats', middleware.authenticateToken, async (req, res) => {
         }
       }
     })
-    const numRecordings = recordings.length
-    for (let recording of recordings) {
-      const recordingZones = recording.stats.zones
-      for (let zone in recordingZones) {
-        if (typeof recordingZones[zone] == 'object') {
-          zones[zone]['hr-seconds'] += recordingZones[zone]['hr-seconds']
-          zones[zone]['hr-percentage'] += recordingZones[zone]['hr-percentage']
-          zones[zone]['watt-seconds'] += recordingZones[zone]['watt-seconds']
-          zones[zone]['watt-percentage'] += recordingZones[zone]['watt-percentage']
+    const numWorkouts = workouts.length
+    for (let workout of workouts) {
+      const workoutZones = workout.stats.zones
+      for (let zone in workoutZones) {
+        if (typeof workoutZones[zone] == 'object') {
+          zones[zone]['hr-seconds'] += workoutZones[zone]['hr-seconds']
+          zones[zone]['hr-percentage'] += workoutZones[zone]['hr-percentage']
+          zones[zone]['watt-seconds'] += workoutZones[zone]['watt-seconds']
+          zones[zone]['watt-percentage'] += workoutZones[zone]['watt-percentage']
         }
       }
-      if (recording.effort) {
-        effort += recording.effort
+      if (workout.effort) {
+        effort += workout.effort
       }
-      else if (recording.hr_effort) {
-        effort += recording.hr_effort
+      else if (workout.hr_effort) {
+        effort += workout.hr_effort
       }
-      if (recording.length) {
-        length += recording.length
+      if (workout.length) {
+        length += workout.length
       }
-      if (recording.duration) {
-        duration += recording.duration
+      if (workout.duration) {
+        duration += workout.duration
       }
 
     }
-    res.json({ numRecordings, effort, duration, length, starts_at, ends_at, zones })
+    res.json({ numWorkouts, effort, duration, length, starts_at, ends_at, zones })
   } catch (e) {
     res.status(500).json({ message: e.message })
   }
@@ -371,15 +371,15 @@ router.get('/me/stats', middleware.authenticateToken, async (req, res) => {
 /**
  * @swagger
  * 
- * /recordings/{id}:
+ * /workouts/{id}:
  *  delete:
- *    tags: [Recordings]
- *    summary: Delete a recording by ID
+ *    tags: [Workouts]
+ *    summary: Delete a workout by ID
  *    parameters:
  *      - name: id
  *        in: path
  *        required: true
- *        description: ID of the recording to delete
+ *        description: ID of the workout to delete
  *        schema:
  *           type: integer
  *    responses:
@@ -395,15 +395,15 @@ router.get('/me/stats', middleware.authenticateToken, async (req, res) => {
 router.delete('/:id', middleware.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id
-    const recording = await Recording.findOne({
+    const workout = await Workout.findOne({
       where: {
         id: id
       }
     })
-    if (!recording) {
-      return res.status(404).json({ message: 'Recording could not be found.' })
+    if (!workout) {
+      return res.status(404).json({ message: 'Workout could not be found.' })
     }
-    await recording.destroy()
+    await workout.destroy()
     res.json({ success: true })
   } catch (e) {
     res.status(500).json({ message: e.message })

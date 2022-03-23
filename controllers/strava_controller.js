@@ -1,9 +1,9 @@
-const Recording = require('../models/recording')
+const Workout = require('../models/workout')
 const User = require('../models/user')
 const express = require('express')
 const router = express.Router()
 const middleware = require('../middleware')
-const { sequelize } = require('../models/recording')
+const { sequelize } = require('../models/workout')
 const polyline = require('@mapbox/polyline')
 const axios = require('axios')
 
@@ -42,11 +42,11 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
     const filteredData = []
     for (activity of data) {
       const id = activity.id.toString()
-      const recording = await Recording.findOne({
+      const workout = await Workout.findOne({
         where: { source_id: id }
       })
-      if (recording) {
-        activity.trackId = recording.id
+      if (workout) {
+        activity.trackId = workout.id
       }
       filteredData.push(activity)
     }
@@ -144,28 +144,28 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     activity = data.type?.toLowerCase()
     stoppedDate.setSeconds(startDate.getSeconds() + duration)
     if (streamResponse.data) {
-      stats = Recording.getStats(streamResponse.data, actor.hr_zones, actor.power_zones)
+      stats = Workout.getStats(streamResponse.data, actor.hr_zones, actor.power_zones)
     }
     if (data.weighted_average_watts && actor.threshold_power) {
       tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
     }
     if (data.has_heartrate && streamResponse.data?.heartrate?.data) {
-      hrtss = Recording.findHRTSS(actor, streamResponse.data.heartrate.data)
+      hrtss = Workout.findHRTSS(actor, streamResponse.data.heartrate.data)
       hrtss = Math.round(hrtss * 100)
     }
 
-    //Check if recording already exists in DB
-    const recording = await Recording.findOne({
+    //Check if workout already exists in DB
+    const workout = await Workout.findOne({
       where: {
         source_id: source_id
       }
     })
-    if (recording) {
-      return res.status(500).json({ message: 'Recording already exists!' })
+    if (workout) {
+      return res.status(500).json({ message: 'Workout already exists!' })
     }
 
-    // Create recording entry
-    const newRecording = await Recording.create({
+    // Create workout entry
+    const newWorkout = await Workout.create({
       name: name,
       length: length,
       hr_effort: hrtss,
@@ -179,7 +179,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
       stopped_at: stoppedDate,
       user_id: actor.id
     })
-    res.json(newRecording)
+    res.json(newWorkout)
   } catch (e) {
     console.log(e)
     res.status(500).json({ message: e.message })

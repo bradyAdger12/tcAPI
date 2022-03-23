@@ -2,11 +2,11 @@ const sequelize = require('../database.js')
 const { Sequelize, Model, Op } = require('sequelize');
 const _ = require('lodash')
 const moment = require('moment')
-class Recording extends Model {
+class Workout extends Model {
 }
 
 
-Recording.statsObject = function () {
+Workout.statsObject = function () {
   return {
     'zones': {
       'hasWatts': false,
@@ -71,12 +71,12 @@ Recording.statsObject = function () {
   }
 }
 
-Recording.getEffortToday = async function (date) {
+Workout.getEffortToday = async function (date) {
   start = moment(date.set({ 'hour': 0, 'minute': 0, 'seconds': 0 }).toString())
   end = moment(date.set({ 'hour': 23, 'minute': 59, 'seconds': 59 }).toString())
   let effort = 0
   try {
-    const recordings = await Recording.findAll({
+    const workouts = await Workout.findAll({
       where: {
         "started_at": {
           [Op.and]: {
@@ -86,22 +86,22 @@ Recording.getEffortToday = async function (date) {
         }
       }
     })
-    for (const recording of recordings) {
-      if (recording.effort) {
-        effort += recording.effort
-      } else if (recording.hr_effort) {
-        effort += recording.hr_effort
+    for (const workout of workouts) {
+      if (workout.effort) {
+        effort += workout.effort
+      } else if (workout.hr_effort) {
+        effort += workout.hr_effort
       }
     }
   } catch (e) { }
   return effort
 }
-Recording.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
+Workout.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
   date = moment(date.toString()).subtract(1, 'days')
   const start = moment(date.toString()).subtract(daysToInclude, 'days')
   let fitness = 0
   try {
-    const recordings = await Recording.findAll({
+    const workouts = await Workout.findAll({
       where: {
         "started_at": {
           [Op.and]: {
@@ -111,11 +111,11 @@ Recording.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
         }
       }
     })
-    for (const recording of recordings) {
-      if (recording.effort) {
-        fitness += recording.effort
-      } else if (recording.hr_effort) {
-        fitness += recording.hr_effort
+    for (const workout of workouts) {
+      if (workout.effort) {
+        fitness += workout.effort
+      } else if (workout.hr_effort) {
+        fitness += workout.hr_effort
       }
     }
     fitness = fitness / daysToInclude
@@ -123,13 +123,13 @@ Recording.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
   return Math.round(fitness)
 }
 
-Recording.getTrainingLoad = async function (date, daysToInclude = 42) {
-  const yesterdayTrainingLoad = await Recording.getTrainingLoadYesterday(date, daysToInclude)
-  const todayEffort = await Recording.getEffortToday(moment())
+Workout.getTrainingLoad = async function (date, daysToInclude = 42) {
+  const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(date, daysToInclude)
+  const todayEffort = await Workout.getEffortToday(moment())
   const start = moment(date.toString()).subtract(daysToInclude, 'days')
   let trainingLoad = 0
   try {
-    const recordings = await Recording.findAll({
+    const workouts = await Workout.findAll({
       where: {
         "started_at": {
           [Op.and]: {
@@ -139,11 +139,11 @@ Recording.getTrainingLoad = async function (date, daysToInclude = 42) {
         }
       }
     })
-    for (const recording of recordings) {
-      if (recording.effort) {
-        trainingLoad += recording.effort
-      } else if (recording.hr_effort) {
-        trainingLoad += recording.hr_effort
+    for (const workout of workouts) {
+      if (workout.effort) {
+        trainingLoad += workout.effort
+      } else if (workout.hr_effort) {
+        trainingLoad += workout.hr_effort
       }
     }
     trainingLoad = yesterdayTrainingLoad + ((todayEffort - yesterdayTrainingLoad) * (1/daysToInclude))
@@ -195,11 +195,11 @@ buildStats = function (stats, list, listName, i, seconds, timeSliceName) {
   }
 }
 
-Recording.getStats = function (stream, hrZones, powerZones) {
+Workout.getStats = function (stream, hrZones, powerZones) {
   const heartrate = stream.heartrate?.data ?? []
   const watts = stream.watts?.data ?? []
   const listLength = heartrate.length
-  const stats = Recording.statsObject()
+  const stats = Workout.statsObject()
   if (watts.length > 0) {
     stats.hasWatts = true
   } if (heartrate.length > 0) {
@@ -293,7 +293,7 @@ Recording.getStats = function (stream, hrZones, powerZones) {
   return stats
 }
 
-Recording.findHRTSS = function (actor, heartrates) {
+Workout.findHRTSS = function (actor, heartrates) {
   try {
     let hrtss = null
     const k = actor.gender == 'male' ? 1.92 : 1.67
@@ -319,11 +319,7 @@ Recording.findHRTSS = function (actor, heartrates) {
   return null;
 }
 
-Recording.formatRecording = function (user, actor) {
-  // TODO
-}
-
-Recording.init({
+Workout.init({
   id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
   name: { type: Sequelize.STRING, allowNull: false },
   description: { type: Sequelize.STRING },
@@ -342,9 +338,9 @@ Recording.init({
 }, {
   // Other model options go here
   sequelize, // We need to pass the connection instance
-  modelName: 'recordings' // We need to choose the model name
+  modelName: 'workouts' // We need to choose the model name
 });
 
 
 
-module.exports = Recording
+module.exports = Workout
