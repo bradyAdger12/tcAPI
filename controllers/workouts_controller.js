@@ -177,17 +177,17 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
     }
     const summaries = []
     while (currentDate.format('D MMMM YYYY') != endDate.format('D MMMM YYYY')) {
-      const tracks = _.filter(workouts, (workout) => {
+      const filteredWorkouts = _.filter(workouts, (workout) => {
         return moment(workout.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
       })
-      for (const track of tracks) {
-        if (track.effort) {
-          summary['effort'] += track.effort
-        } else if (track.hr_effort) {
-          summary['effort'] += track.hr_effort
+      for (const workout of filteredWorkouts) {
+        if (workout.effort) {
+          summary['effort'] += workout.effort
+        } else if (workout.hr_effort) {
+          summary['effort'] += workout.hr_effort
         }
-        summary['duration'] += track.duration
-        summary['distance'] += track.length
+        summary['duration'] += workout.duration
+        summary['distance'] += workout.length
       }
       if (currentDate.day() == 0) {
         summary['fitness'] = await Workout.getTrainingLoad(currentDate)
@@ -206,7 +206,7 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
       }
       dates.push({
         date: currentDate.toISOString(),
-        tracks: tracks
+        workouts: filteredWorkouts
       })
 
       currentDate.add(1, 'day')

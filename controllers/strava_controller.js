@@ -46,7 +46,7 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
         where: { source_id: id }
       })
       if (workout) {
-        activity.trackId = workout.id
+        activity.workoutId = workout.id
       }
       filteredData.push(activity)
     }
