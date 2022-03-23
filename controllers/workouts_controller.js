@@ -7,7 +7,7 @@ const data = require('../stream_data.js')
 const _ = require('lodash')
 const { Op } = require('sequelize')
 const moment = require('moment')
-const { sum } = require('../models/workout')
+const cache = require('../cache.js')
 
 // Workouts routes
 
@@ -81,7 +81,6 @@ router.get('/me', middleware.authenticateToken, async (req, res) => {
     const startsAt = req.query.startsAt
     const endsAt = req.query.endsAt
     const actorId = req.actor.id
-    console.log(startsAt)
     const where = {
       user_id: actorId
     }
@@ -140,7 +139,7 @@ router.get('/me', middleware.authenticateToken, async (req, res) => {
  *      default:
  *          description: Generic server error
  */
-router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
+router.get('/me/calendar', [middleware.authenticateToken, middleware.cache ], async (req, res) => {
   try {
     const startsAt = req.query.startsAt
     const endsAt = req.query.endsAt
@@ -157,12 +156,14 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
         }
       }
     }
-    const workouts = await Workout.findAll({
+    let workouts = await Workout.findAll({
       order: [
         // Will escape title and validate DESC against a list of valid direction parameters
         ['started_at', 'ASC']],
-      where
+      where,
+      attributes: { exclude: ['source', 'sourceId', 'stats', 'createdAt', 'updatedAt', 'geom'] }
     })
+
     const currentDate = moment(startsAt)
     const endDate = moment(endsAt)
     endDate.add(1, 'day')
@@ -177,7 +178,7 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
     }
     const summaries = []
     while (currentDate.format('D MMMM YYYY') != endDate.format('D MMMM YYYY')) {
-      const filteredWorkouts = _.filter(workouts, (workout) => {
+      let filteredWorkouts = _.filter(workouts, (workout) => {
         return moment(workout.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
       })
       for (const workout of filteredWorkouts) {
@@ -215,6 +216,9 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
     for (let summary of summaries) {
       dates.splice(index, 0, { summary })
       index += 7 + 1
+    }
+    if (!req.body.calendar_cached) {
+      await cache.setEx(`calendar-${req.query.startsAt}${req.query.endsAt}`, 120, JSON.stringify({ dates }))
     }
     res.json({ dates })
   } catch (e) {

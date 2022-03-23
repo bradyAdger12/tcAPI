@@ -72,8 +72,8 @@ Workout.statsObject = function () {
 }
 
 Workout.getEffortToday = async function (date) {
-  start = moment(date.set({ 'hour': 0, 'minute': 0, 'seconds': 0 }).toString())
-  end = moment(date.set({ 'hour': 23, 'minute': 59, 'seconds': 59 }).toString())
+  start = moment(date.set({ 'hour': 0, 'minute': 0, 'seconds': 0 }).toISOString())
+  end = moment(date.set({ 'hour': 23, 'minute': 59, 'seconds': 59 }).toISOString())
   let effort = 0
   try {
     const workouts = await Workout.findAll({
@@ -97,16 +97,16 @@ Workout.getEffortToday = async function (date) {
   return effort
 }
 Workout.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
-  date = moment(date.toString()).subtract(1, 'days')
-  const start = moment(date.toString()).subtract(daysToInclude, 'days')
+  date = moment(date.toISOString()).subtract(1, 'days')
+  const start = moment(date.toISOString()).subtract(daysToInclude, 'days')
   let fitness = 0
   try {
     const workouts = await Workout.findAll({
       where: {
         "started_at": {
           [Op.and]: {
-            [Op.gte]: start,
-            [Op.lte]: date
+            [Op.gte]: start.toISOString(),
+            [Op.lte]: date.toISOString()
           }
         }
       }
@@ -124,17 +124,17 @@ Workout.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
 }
 
 Workout.getTrainingLoad = async function (date, daysToInclude = 42) {
-  const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(moment(date.toString()), daysToInclude)
-  const todayEffort = await Workout.getEffortToday(moment(date.toString()))
-  const start = moment(date.toString()).subtract(daysToInclude, 'days')
+  const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(moment(date.toISOString()), daysToInclude)
+  const todayEffort = await Workout.getEffortToday(moment(date.toISOString()))
+  const start = moment(date.toISOString()).subtract(daysToInclude, 'days')
   let trainingLoad = 0
   try {
     const workouts = await Workout.findAll({
       where: {
         "started_at": {
           [Op.and]: {
-            [Op.gte]: start,
-            [Op.lte]: date
+            [Op.gte]: start.toISOString(),
+            [Op.lte]: date.toISOString()
           }
         }
       }
