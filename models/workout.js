@@ -124,8 +124,8 @@ Workout.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
 }
 
 Workout.getTrainingLoad = async function (date, daysToInclude = 42) {
-  const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(date, daysToInclude)
-  const todayEffort = await Workout.getEffortToday(moment())
+  const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(moment(date.toString()), daysToInclude)
+  const todayEffort = await Workout.getEffortToday(moment(date.toString()))
   const start = moment(date.toString()).subtract(daysToInclude, 'days')
   let trainingLoad = 0
   try {
