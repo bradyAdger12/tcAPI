@@ -31,16 +31,13 @@ const axios = require('axios')
 
 router.get('/activities', middleware.authenticateToken, async (req, res) => {
   const actor = req.actor
+  const page = req.query.page ?? 1
+  const per_page = req.query.per_page ?? 30
 
 
   try {
-    const user = await User.findOne({
-      where: {
-        id: actor.id
-      }
-    })
-    const headers = { headers: { 'Authorization': 'Bearer ' + user.strava_token } }
-    const activityResponse = await axios.get(`https://www.strava.com/api/v3/athlete/activities`, headers)
+    const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
+    const activityResponse = await axios.get(`https://www.strava.com/api/v3/athlete/activities?per_page=${per_page}&page=${page}`, headers)
     const data = activityResponse.data
     const filteredData = []
     for (activity of data) {
@@ -49,11 +46,43 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
         where: { source_id: id }
       })
       if (recording) {
-        activity.isImported = true
+        activity.trackId = recording.id
       }
       filteredData.push(activity)
     }
     res.json(filteredData)
+  } catch (e) {
+    console.log(e)
+    res.status(500).json({ message: e.message })
+  }
+})
+
+
+/**
+ * @swagger
+ * 
+ * /strava/athlete:
+ *  get:
+ *    tags: [Strava]
+ *    summary: Get strava athlete
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+
+ router.get('/athlete', middleware.authenticateToken, async (req, res) => {
+  const actor = req.actor
+  try {
+    const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
+    const athleteResponse = await axios.get(`https://www.strava.com/api/v3/athlete`, headers)
+    const data = athleteResponse.data
+    res.json(data)
   } catch (e) {
     console.log(e)
     res.status(500).json({ message: e.message })
@@ -90,12 +119,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
   const actor = req.actor
 
   try {
-    let user = await User.findOne({
-      where: {
-        id: actor.id
-      }
-    })
-    const headers = { headers: { 'Authorization': 'Bearer ' + user.strava_token } }
+    const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
     let name = null
     let duration = null
     let length = null
@@ -105,7 +129,9 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     let stoppedDate = null
     let source_id = null
     let activity = null
+    let stats = null
     const activityResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}`, headers)
+    const streamResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}/streams?key_by_type=time&keys=heartrate,watts`, headers)
     const data = activityResponse.data
 
     //Assign values from response
@@ -117,11 +143,14 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     stoppedDate = new Date(startDate.toString())
     activity = data.type?.toLowerCase()
     stoppedDate.setSeconds(startDate.getSeconds() + duration)
-    if (data.weighted_average_watts && user.threshold_power) {
-      tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / user.threshold_power)) / (user.threshold_power * 3600))) * 100)
+    if (streamResponse.data) {
+      stats = Recording.getStats(streamResponse.data, actor.hr_zones, actor.power_zones)
     }
-    if (data.has_heartrate) {
-      hrtss = await Recording.findHRTSS(actor, id, headers)
+    if (data.weighted_average_watts && actor.threshold_power) {
+      tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+    }
+    if (data.has_heartrate && streamResponse.data?.heartrate?.data) {
+      hrtss = Recording.findHRTSS(actor, streamResponse.data.heartrate.data)
       hrtss = Math.round(hrtss * 100)
     }
 
@@ -134,7 +163,6 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     if (recording) {
       return res.status(500).json({ message: 'Recording already exists!' })
     }
-    // res.send()
 
     // Create recording entry
     const newRecording = await Recording.create({
@@ -145,6 +173,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
       source: 'strava',
       activity: activity,
       source_id: source_id,
+      stats: stats,
       duration: duration,
       started_at: startDate,
       stopped_at: stoppedDate,

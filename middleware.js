@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken')
+const User = require('./models/user.js')
 const middleware = {
   authenticateToken: (req, res, next) => {
     const authHeader = req.headers['authorization']
@@ -6,9 +7,13 @@ const middleware = {
     if (token == null) {
       return res.status(401).json({ message: 'You are unauthorized to perform this action' })
     }
-    jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
+    jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, user) => {
       if (err) return res.sendStatus(403)
-      req.actor = user
+      req.actor = await User.findOne({
+        where: {
+          id: user.id
+        }
+      })
       next()
     })
   }

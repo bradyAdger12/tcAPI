@@ -155,7 +155,7 @@ const schemas = {
         "type": "string",
         "default": ""
       },
-      "length": {
+      "hr_effort": {
         "type": "integer",
         "default": "null"
       },
