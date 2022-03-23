@@ -169,7 +169,6 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
     const dates = []
     let summary = {
       'effort': 0,
-      'hrEffort': 0,
       'duration': 0,
       'distance': 0,
       'fitness': 0,
@@ -182,20 +181,22 @@ router.get('/me/calendar', middleware.authenticateToken, async (req, res) => {
         return moment(recording.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
       })
       for (const track of tracks) {
-        summary['effort'] += track.effort
-        summary['hrEffort'] += track.hr_effort
+        if (track.effort) {
+          summary['effort'] += track.effort
+        } else if (track.hr_effort) {
+          summary['effort'] += track.hr_effort
+        }
         summary['duration'] += track.duration
         summary['distance'] += track.length
       }
       if (currentDate.day() == 0) {
-        summary['fitness'] = await Recording.getFitness(currentDate)
-        summary['fatigue'] = await Recording.getFatigue(currentDate)
+        summary['fitness'] = await Recording.getTrainingLoad(currentDate)
+        summary['fatigue'] = await Recording.getTrainingLoad(currentDate, 7)
         summary['form'] = Math.round(summary['fitness'] - summary['fatigue'])
 
         summaries.push(summary)
         summary = {
           'effort': 0,
-          'hrEffort': 0,
           'duration': 0,
           'distance': 0,
           'fitness': 0,

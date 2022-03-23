@@ -71,54 +71,84 @@ Recording.statsObject = function () {
   }
 }
 
-Recording.getFitness = async function (date) {
-  const daysToInclude = 42
-  const start = moment(date.toString()).subtract(daysToInclude, 'days')
-  let fitness = 0
-  const recordings = await Recording.findAll({
-    where: {
-      "started_at": {
-        [Op.and]: {
-          [Op.gte]: start,
-          [Op.lte]: date
+Recording.getEffortToday = async function (date) {
+  start = moment(date.set({ 'hour': 0, 'minute': 0, 'seconds': 0 }).toString())
+  end = moment(date.set({ 'hour': 23, 'minute': 59, 'seconds': 59 }).toString())
+  let effort = 0
+  try {
+    const recordings = await Recording.findAll({
+      where: {
+        "started_at": {
+          [Op.and]: {
+            [Op.gte]: start,
+            [Op.lte]: date
+          }
         }
       }
+    })
+    for (const recording of recordings) {
+      if (recording.effort) {
+        effort += recording.effort
+      } else if (recording.hr_effort) {
+        effort += recording.hr_effort
+      }
     }
-  })
-  for (const recording of recordings) {
-    if (recording.effort) {
-      fitness += recording.effort
-    } else if (recording.hr_effort) {
-      fitness += recording.hr_effort
+  } catch (e) { }
+  return effort
+}
+Recording.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
+  date = moment(date.toString()).subtract(1, 'days')
+  const start = moment(date.toString()).subtract(daysToInclude, 'days')
+  let fitness = 0
+  try {
+    const recordings = await Recording.findAll({
+      where: {
+        "started_at": {
+          [Op.and]: {
+            [Op.gte]: start,
+            [Op.lte]: date
+          }
+        }
+      }
+    })
+    for (const recording of recordings) {
+      if (recording.effort) {
+        fitness += recording.effort
+      } else if (recording.hr_effort) {
+        fitness += recording.hr_effort
+      }
     }
-  }
-  fitness = fitness / daysToInclude
+    fitness = fitness / daysToInclude
+  } catch (e) { }
   return Math.round(fitness)
 }
 
-Recording.getFatigue = async function (date) {
-  const daysToInclude = 7
+Recording.getTrainingLoad = async function (date, daysToInclude = 42) {
+  const yesterdayTrainingLoad = await Recording.getTrainingLoadYesterday(date, daysToInclude)
+  const todayEffort = await Recording.getEffortToday(moment())
   const start = moment(date.toString()).subtract(daysToInclude, 'days')
-  let fatigue = 0
-  const recordings = await Recording.findAll({
-    where: {
-      "started_at": {
-        [Op.and]: {
-          [Op.gte]: start,
-          [Op.lte]: date
+  let trainingLoad = 0
+  try {
+    const recordings = await Recording.findAll({
+      where: {
+        "started_at": {
+          [Op.and]: {
+            [Op.gte]: start,
+            [Op.lte]: date
+          }
         }
       }
+    })
+    for (const recording of recordings) {
+      if (recording.effort) {
+        trainingLoad += recording.effort
+      } else if (recording.hr_effort) {
+        trainingLoad += recording.hr_effort
+      }
     }
-  })
-  for (const recording of recordings) {
-    if (recording.effort) {
-      fatigue += recording.effort
-    } else if (recording.hr_effort) {
-      fatigue += recording.hr_effort
-    }
-  }
-  fatigue = fatigue / daysToInclude
-  return Math.round(fatigue)
+    trainingLoad = yesterdayTrainingLoad + ((todayEffort - yesterdayTrainingLoad) * (1/daysToInclude))
+  } catch (e) { }
+  return Math.round(trainingLoad)
 }
 
 buildZoneDistribution = function (watts, heartrate, hrZones, powerZones, stats) {
