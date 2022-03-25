@@ -49,6 +49,83 @@ router.get('/stats/test', async (req, res) => {
 /**
  * @swagger
  * 
+ * /workouts/weekly_summary:
+ *  get:
+ *    tags: [Workouts]
+ *    summary: Get training load for specific day
+ *    parameters:
+ *      - name: date
+ *        in: path
+ *        required: false
+ *        description: startDate filter
+ *        schema:
+ *           type: Date
+ *      - name: endDate
+ *        in: path
+ *        required: false
+ *        description: startDate filter
+ *        schema:
+ *           type: endDate
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+router.get('/weekly_summary', middleware.authenticateToken, async (req, res) => {
+  try {
+    const startDate = req.query.startDate
+    const endDate = req.query.endDate
+    if (!startDate || !endDate) {
+      throw Error('startDate and endDate are required')
+    }
+    let workouts = await Workout.findAll({
+      order: [
+        ['started_at', 'DESC']],
+      where: {
+        "started_at": {
+          [Op.and]: {
+            [Op.gte]: startDate,
+            [Op.lte]: endDate
+          }
+        }
+      },
+      attributes: { exclude: ['source', 'sourceId', 'stats', 'createdAt', 'updatedAt', 'geom'] }
+    })
+    let summary = {
+      'effort': 0,
+      'duration': 0,
+      'distance': 0,
+      'fitness': 0,
+      'fatigue': 0,
+      'form': 0
+    }
+    for (const workout of workouts) {
+      if (workout.effort) {
+        summary['effort'] += workout.effort
+      } else if (workout.hr_effort) {
+        summary['effort'] += workout.hr_effort
+      }
+      summary['duration'] += workout.duration
+      summary['distance'] += workout.length
+    }
+
+    summary['fitness'] = await Workout.getTrainingLoad(moment(endDate))
+    summary['fatigue'] = await Workout.getTrainingLoad(moment(endDate), 7)
+    summary['form'] = Math.round(summary['fitness'] - summary['fatigue'])
+    res.json({ summary })
+  } catch (e) {
+    res.status(500).json({ message: e.message })
+  }
+})
+
+/**
+ * @swagger
+ * 
  * /workouts/me:
  *  get:
  *    tags: [Workouts]
@@ -139,7 +216,7 @@ router.get('/me', middleware.authenticateToken, async (req, res) => {
  *      default:
  *          description: Generic server error
  */
-router.get('/me/calendar', [middleware.authenticateToken, middleware.cache ], async (req, res) => {
+router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
   try {
     const startsAt = req.query.startsAt
     const endsAt = req.query.endsAt
@@ -158,8 +235,7 @@ router.get('/me/calendar', [middleware.authenticateToken, middleware.cache ], as
     }
     let workouts = await Workout.findAll({
       order: [
-        // Will escape title and validate DESC against a list of valid direction parameters
-        ['started_at', 'ASC']],
+        ['started_at', 'DESC']],
       where,
       attributes: { exclude: ['source', 'sourceId', 'stats', 'createdAt', 'updatedAt', 'geom'] }
     })
@@ -168,57 +244,16 @@ router.get('/me/calendar', [middleware.authenticateToken, middleware.cache ], as
     const endDate = moment(endsAt)
     endDate.add(1, 'day')
     const dates = []
-    let summary = {
-      'effort': 0,
-      'duration': 0,
-      'distance': 0,
-      'fitness': 0,
-      'fatigue': 0,
-      'form': 0
-    }
-    const summaries = []
     while (currentDate.format('D MMMM YYYY') != endDate.format('D MMMM YYYY')) {
       let filteredWorkouts = _.filter(workouts, (workout) => {
         return moment(workout.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
       })
-      for (const workout of filteredWorkouts) {
-        if (workout.effort) {
-          summary['effort'] += workout.effort
-        } else if (workout.hr_effort) {
-          summary['effort'] += workout.hr_effort
-        }
-        summary['duration'] += workout.duration
-        summary['distance'] += workout.length
-      }
-      if (currentDate.day() == 0) {
-        summary['fitness'] = await Workout.getTrainingLoad(currentDate)
-        summary['fatigue'] = await Workout.getTrainingLoad(currentDate, 7)
-        summary['form'] = Math.round(summary['fitness'] - summary['fatigue'])
-
-        summaries.push(summary)
-        summary = {
-          'effort': 0,
-          'duration': 0,
-          'distance': 0,
-          'fitness': 0,
-          'fatigue': 0,
-          'form': 0
-        }
-      }
       dates.push({
         date: currentDate.toISOString(),
         workouts: filteredWorkouts
       })
 
       currentDate.add(1, 'day')
-    }
-    let index = 7
-    for (let summary of summaries) {
-      dates.splice(index, 0, { summary })
-      index += 7 + 1
-    }
-    if (!req.body.calendar_cached) {
-      await cache.setEx(`calendar-${req.query.startsAt}${req.query.endsAt}`, 120, JSON.stringify({ dates }))
     }
     res.json({ dates })
   } catch (e) {
@@ -262,6 +297,51 @@ router.get('/:id', middleware.authenticateToken, async (req, res) => {
     if (!workout) {
       return res.status(404).json({ message: 'Workout could not be found.' })
     }
+    res.json(workout)
+  } catch (e) {
+    res.status(500).json({ message: e.message })
+  }
+})
+
+/**
+ * @swagger
+ * 
+ * /workouts/{id}:
+ *  put:
+ *    tags: [Workouts]
+ *    summary: Update a workout by ID
+ *    parameters:
+ *      - name: id
+ *        in: path
+ *        required: true
+ *        description: ID of the workout
+ *        schema:
+ *           type: integer
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+router.put('/:id', middleware.authenticateToken, async (req, res) => {
+  try {
+    const id = req.params.id
+    let workout = await Workout.findOne({
+      where: {
+        id: id
+      }
+    })
+    if (!workout) {
+      return res.status(404).json({ message: 'Workout could not be found.' })
+    }
+    if (_.has(req.body, 'started_at')) {
+      workout.started_at = req.body.started_at
+    }
+    await workout.save()
     res.json(workout)
   } catch (e) {
     res.status(500).json({ message: e.message })

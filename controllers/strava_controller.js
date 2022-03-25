@@ -1,11 +1,9 @@
 const Workout = require('../models/workout')
-const User = require('../models/user')
 const express = require('express')
 const router = express.Router()
 const middleware = require('../middleware')
-const { sequelize } = require('../models/workout')
-const polyline = require('@mapbox/polyline')
 const axios = require('axios')
+const moment = require('moment')
 
 
 
@@ -126,7 +124,6 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     let hrtss = null
     let tss = null
     let startDate = null
-    let stoppedDate = null
     let source_id = null
     let activity = null
     let stats = null
@@ -139,10 +136,8 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     duration = Math.round(data.moving_time)
     source_id = data.id.toString()
     length = Math.round(data.distance)
-    startDate = new Date(data.start_date_local)
-    stoppedDate = new Date(startDate.toString())
+    startDate = data.start_date
     activity = data.type?.toLowerCase()
-    stoppedDate.setSeconds(startDate.getSeconds() + duration)
     if (streamResponse.data) {
       stats = Workout.getStats(streamResponse.data, actor.hr_zones, actor.power_zones)
     }
@@ -176,7 +171,6 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
       stats: stats,
       duration: duration,
       started_at: startDate,
-      stopped_at: stoppedDate,
       user_id: actor.id
     })
     res.json(newWorkout)
