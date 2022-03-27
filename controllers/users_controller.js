@@ -1,10 +1,12 @@
 const User = require('../models/user')
+const Workout = require('../models/workout')
 const express = require('express')
 const router = express.Router()
 const sequelize = require('../database.js')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const middleware = require('../middleware.js')
+const moment = require('moment')
 const _ = require('lodash')
 
 
@@ -73,6 +75,43 @@ router.get('/:id', middleware.authenticateToken, async (req, res) => {
       return res.json(User.formatUser(user, actor))
     }
     return res.status(404).json({ message: 'User not found.' })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+/**
+ * @swagger
+ * 
+ * /users/me/training_load:
+ *  get:
+ *    tags: [Users]
+ *    summary: Returns a user by id
+ *    parameters:
+ *      - name: date
+ *        in: path
+ *        required: true
+ *        description: Date to get the training load from
+ *        schema:
+ *           type: integer
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+router.get('/me/training_load', middleware.authenticateToken, async (req, res) => {
+  const date = req.query.date
+  const trainingLoad = {}
+  try {
+    trainingLoad['fitness'] = await Workout.getTrainingLoad(moment(date).endOf('day'))
+    trainingLoad['fatigue'] = await Workout.getTrainingLoad(moment(date).endOf('day'), 7)
+    trainingLoad['form'] = Math.round(trainingLoad['fitness'] - trainingLoad['fatigue'])
+    res.json(trainingLoad)
   } catch (error) {
     res.status(500).json({ message: error.message })
   }

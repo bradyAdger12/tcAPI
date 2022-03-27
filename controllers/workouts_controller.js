@@ -8,6 +8,7 @@ const _ = require('lodash')
 const { Op } = require('sequelize')
 const moment = require('moment')
 const cache = require('../cache.js')
+const getSummary = require('../tools/summary.js')
 
 // Workouts routes
 
@@ -52,7 +53,7 @@ router.get('/stats/test', async (req, res) => {
  * /workouts/weekly_summary:
  *  get:
  *    tags: [Workouts]
- *    summary: Get training load for specific day
+ *    summary: Get training load for a specified week
  *    parameters:
  *      - name: date
  *        in: path
@@ -83,40 +84,7 @@ router.get('/weekly_summary', middleware.authenticateToken, async (req, res) => 
     if (!startDate || !endDate) {
       throw Error('startDate and endDate are required')
     }
-    let workouts = await Workout.findAll({
-      order: [
-        ['started_at', 'DESC']],
-      where: {
-        "started_at": {
-          [Op.and]: {
-            [Op.gte]: startDate,
-            [Op.lte]: endDate
-          }
-        }
-      },
-      attributes: { exclude: ['source', 'sourceId', 'stats', 'createdAt', 'updatedAt', 'geom'] }
-    })
-    let summary = {
-      'effort': 0,
-      'duration': 0,
-      'distance': 0,
-      'fitness': 0,
-      'fatigue': 0,
-      'form': 0
-    }
-    for (const workout of workouts) {
-      if (workout.effort) {
-        summary['effort'] += workout.effort
-      } else if (workout.hr_effort) {
-        summary['effort'] += workout.hr_effort
-      }
-      summary['duration'] += workout.duration
-      summary['distance'] += workout.length
-    }
-
-    summary['fitness'] = await Workout.getTrainingLoad(moment(endDate))
-    summary['fatigue'] = await Workout.getTrainingLoad(moment(endDate), 7)
-    summary['form'] = Math.round(summary['fitness'] - summary['fatigue'])
+    summary = await getSummary(startDate, endDate)
     res.json({ summary })
   } catch (e) {
     res.status(500).json({ message: e.message })
@@ -174,13 +142,10 @@ router.get('/me', middleware.authenticateToken, async (req, res) => {
       order: [
         // Will escape title and validate DESC against a list of valid direction parameters
         ['started_at', 'DESC']],
-      where
+      where,
+      attributes: { exclude: Workout.light() }
     })
-    const formattedWorkouts = []
-    for (let workout of workouts) {
-      formattedWorkouts.push(_.omit(workout.toJSON(), ['stats', 'createdAt', 'updatedAt', 'source', 'source_id', 'geom']))
-    }
-    res.json(formattedWorkouts)
+    res.json(workouts)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }
@@ -218,8 +183,14 @@ router.get('/me', middleware.authenticateToken, async (req, res) => {
  */
 router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
   try {
-    const startsAt = req.query.startsAt
-    const endsAt = req.query.endsAt
+    let startsAt = req.query.startsAt
+    let endsAt = req.query.endsAt
+    if (startsAt) {
+      startsAt = moment(startsAt).startOf('day').toISOString()
+    }
+    if(endsAt) {
+      endsAt = moment(endsAt).endOf('day').toISOString() 
+    }
     const actorId = req.actor.id
     const where = {
       user_id: actorId
@@ -237,12 +208,11 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
       order: [
         ['started_at', 'DESC']],
       where,
-      attributes: { exclude: ['source', 'sourceId', 'stats', 'createdAt', 'updatedAt', 'geom'] }
+      attributes: { exclude: Workout.light() }
     })
 
     const currentDate = moment(startsAt)
-    const endDate = moment(endsAt)
-    endDate.add(1, 'day')
+    const endDate = moment(endsAt).add(1, 'days')
     const dates = []
     while (currentDate.format('D MMMM YYYY') != endDate.format('D MMMM YYYY')) {
       let filteredWorkouts = _.filter(workouts, (workout) => {
@@ -253,7 +223,15 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
         workouts: filteredWorkouts
       })
 
-      currentDate.add(1, 'day')
+      if (currentDate.day() == 0) {
+        let summaryStart = moment(currentDate.toISOString()).subtract(6, 'days').startOf('day')
+        let summaryEnd = moment(currentDate.toISOString()).endOf('day')
+        const summary = await getSummary(summaryStart.toISOString(), summaryEnd.toISOString())
+        // console.log(currentDate.format('dd'))
+        dates.push({ summary })
+      }
+
+      currentDate.add(1, 'days')
     }
     res.json({ dates })
   } catch (e) {
@@ -289,10 +267,12 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
 router.get('/:id', middleware.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id
+    const light = req.query.light
     const workout = await Workout.findOne({
       where: {
         id: id
-      }
+      },
+      attributes: { exclude: light ? Workout.light() : [] }
     })
     if (!workout) {
       return res.status(404).json({ message: 'Workout could not be found.' })
@@ -330,10 +310,12 @@ router.get('/:id', middleware.authenticateToken, async (req, res) => {
 router.put('/:id', middleware.authenticateToken, async (req, res) => {
   try {
     const id = req.params.id
+    const light = req.query.light
     let workout = await Workout.findOne({
       where: {
         id: id
-      }
+      },
+      attributes: { exclude: light ? Workout.light() : [] }
     })
     if (!workout) {
       return res.status(404).json({ message: 'Workout could not be found.' })

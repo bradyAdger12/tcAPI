@@ -41,7 +41,8 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
     for (activity of data) {
       const id = activity.id.toString()
       const workout = await Workout.findOne({
-        where: { source_id: id }
+        where: { source_id: id },
+        attributes: { exclude: Workout.light() }
       })
       if (workout) {
         activity.workoutId = workout.id
@@ -74,7 +75,7 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
  *          description: Generic server error
  */
 
- router.get('/athlete', middleware.authenticateToken, async (req, res) => {
+router.get('/athlete', middleware.authenticateToken, async (req, res) => {
   const actor = req.actor
   try {
     const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
@@ -126,7 +127,8 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     let startDate = null
     let source_id = null
     let activity = null
-    let stats = null
+    let zones = null
+    let bests = null
     const activityResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}`, headers)
     const streamResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}/streams?key_by_type=time&keys=heartrate,watts`, headers)
     const data = activityResponse.data
@@ -139,7 +141,9 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     startDate = data.start_date
     activity = data.type?.toLowerCase()
     if (streamResponse.data) {
-      stats = Workout.getStats(streamResponse.data, actor.hr_zones, actor.power_zones)
+      streams = streamResponse.data
+      zones = Workout.buildZoneDistribution(streamResponse.data?.watts?.data, streamResponse.data?.heartrate?.data, actor.hr_zones, actor.power_zones)
+      bests = Workout.getBests(streamResponse.data, actor.hr_zones, actor.power_zones)
     }
     if (data.weighted_average_watts && actor.threshold_power) {
       tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
@@ -153,7 +157,8 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     const workout = await Workout.findOne({
       where: {
         source_id: source_id
-      }
+      },
+      attributes: { exclude: Workout.light() }
     })
     if (workout) {
       return res.status(500).json({ message: 'Workout already exists!' })
@@ -168,7 +173,9 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
       source: 'strava',
       activity: activity,
       source_id: source_id,
-      stats: stats,
+      bests: bests,
+      zones: zones,
+      streams: streams,
       duration: duration,
       started_at: startDate,
       user_id: actor.id
