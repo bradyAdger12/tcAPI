@@ -88,10 +88,12 @@ Workout.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
 }
 
 Workout.getTrainingLoad = async function (date, daysToInclude = 42) {
-  const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(moment(date.toISOString()), daysToInclude)
-  const todayEffort = await Workout.getEffortToday(moment(date.toISOString()))
+  // const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(moment(date.toISOString()), daysToInclude)
+  // const todayEffort = await Workout.getEffortToday(moment(date.toISOString()))
   const start = moment(date.toISOString()).subtract(daysToInclude, 'days')
   let trainingLoad = 0
+  let todaysEffort = 0
+  let count = 1
   try {
     const workouts = await Workout.findAll({
       where: {
@@ -103,17 +105,25 @@ Workout.getTrainingLoad = async function (date, daysToInclude = 42) {
         }
       }
     })
-    for (const workout of workouts) {
-      if (workout.effort) {
-        trainingLoad += workout.effort
-      } else if (workout.hr_effort) {
-        trainingLoad += workout.hr_effort
+    while (start.format('D MMMM YYYY') != date.format('D MMMM YYYY')) {
+      for (const workout of workouts) {
+        if (moment(workout.started_at).format('D MMMM YYYY') == start.format('D MMMM YYYY')) {
+          if (workout.effort) {
+            todaysEffort += workout.effort
+          } else if (workout.hr_effort) {
+            todaysEffort += workout.hr_effort
+          }
+        }
       }
+      // (1/7) x (1-1/7)^1 = 12.2%
+      const weight = ((1 / daysToInclude) * Math.pow((1 - (1 / daysToInclude)), daysToInclude - count))
+      trainingLoad += todaysEffort * ( 1-weight)
+      todaysEffort = 0
+      start.add(1, 'days')
+      count += 1
     }
-    // CTLtoday = CTLyesterday + (TSStoday - CTLyesterday)(1/CTL time constant)
-    trainingLoad = yesterdayTrainingLoad + ((todayEffort - yesterdayTrainingLoad) / daysToInclude)
   } catch (e) { }
-  return Math.round(trainingLoad)
+  return Math.round(trainingLoad / daysToInclude)
 }
 
 Workout.buildZoneDistribution = function (watts, heartrate, hrZones, powerZones) {

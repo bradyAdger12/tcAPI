@@ -50,6 +50,31 @@ router.get('/stats/test', async (req, res) => {
 /**
  * @swagger
  * 
+ * /workouts/create/planned:
+ *  get:
+ *    tags: [Workouts]
+ *    summary: Create a future workout
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+router.post('/create/planned', middleware.authenticateToken, async (req, res) => {
+  try {
+    console.log(req.body)
+  } catch (e) {
+    res.status(500).json({ message: e.message })
+  }
+})
+
+/**
+ * @swagger
+ * 
  * /workouts/weekly_summary:
  *  get:
  *    tags: [Workouts]
@@ -84,7 +109,7 @@ router.get('/weekly_summary', middleware.authenticateToken, async (req, res) => 
     if (!startDate || !endDate) {
       throw Error('startDate and endDate are required')
     }
-    summary = await getSummary(startDate, endDate)
+    summary = await getSummary(moment(startDate).startOf('day'), moment(endDate).endOf('day'))
     res.json({ summary })
   } catch (e) {
     res.status(500).json({ message: e.message })
@@ -188,8 +213,8 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
     if (startsAt) {
       startsAt = moment(startsAt).startOf('day').toISOString()
     }
-    if(endsAt) {
-      endsAt = moment(endsAt).endOf('day').toISOString() 
+    if (endsAt) {
+      endsAt = moment(endsAt).endOf('day').toISOString()
     }
     const actorId = req.actor.id
     const where = {
@@ -214,6 +239,7 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
     const currentDate = moment(startsAt)
     const endDate = moment(endsAt).add(1, 'days')
     const dates = []
+    let summary = null
     while (currentDate.format('D MMMM YYYY') != endDate.format('D MMMM YYYY')) {
       let filteredWorkouts = _.filter(workouts, (workout) => {
         return moment(workout.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
@@ -223,11 +249,11 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
         workouts: filteredWorkouts
       })
 
-      if (currentDate.day() == 0) {
-        let summaryStart = moment(currentDate.toISOString()).subtract(6, 'days').startOf('day')
-        let summaryEnd = moment(currentDate.toISOString()).endOf('day')
-        const summary = await getSummary(summaryStart.toISOString(), summaryEnd.toISOString())
-        // console.log(currentDate.format('dd'))
+      if (currentDate.day() == 1) {
+        let summaryStart = moment(currentDate.toISOString()).startOf('day')
+        let summaryEnd = moment(currentDate.toISOString()).add(6, 'days').endOf('day')
+        summary = await getSummary(summaryStart, summaryEnd)
+      } else if (currentDate.day() == 0) {
         dates.push({ summary })
       }
 
