@@ -1,4 +1,5 @@
 const Workout = require('../models/workout')
+const User = require('../models/user')
 const express = require('express')
 const router = express.Router()
 const middleware = require('../middleware')
@@ -145,7 +146,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     if (streamResponse.data) {
       streams = streamResponse.data
       zones = Workout.buildZoneDistribution(streamResponse.data?.watts?.data, streamResponse.data?.heartrate?.data, actor.hr_zones, actor.power_zones)
-      bests = Workout.getBests(streamResponse.data, actor.hr_zones, actor.power_zones)
+      bests = Workout.getBests(actor, streamResponse.data)
     }
     if (data.weighted_average_watts && actor.threshold_power) {
       tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
@@ -183,6 +184,17 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
       started_at: startDate,
       user_id: actor.id
     })
+
+    // Update user bests if necessary
+    try {
+      const user = await User.findOne({
+        where: {
+          id: actor.id
+        }
+      })
+      user.bests = actor.bests
+      await user.save()
+    } catch (e) { }
     res.json(newWorkout)
   } catch (e) {
     console.log(e)

@@ -158,7 +158,7 @@ buildStats = function (bests, list, listName, i, seconds, timeSliceName) {
   }
 }
 
-Workout.getBests = function (stream, hrZones, powerZones) {
+Workout.getBests = function (actor, stream) {
   const heartrate = stream.heartrate?.data ?? []
   const watts = stream.watts?.data ?? []
   const listLength = heartrate?.length || watts?.length
@@ -269,6 +269,20 @@ Workout.getBests = function (stream, hrZones, powerZones) {
         }
       }
     }
+
+    // Determine if workouts bests are greater than exisiting user bests
+    for (let [key, value] of Object.entries(bests['watts'])) {
+      if (bests['watts'][key] > actor.bests['watts'][key]) {
+        actor.bests['watts'][key] = value
+      }
+    }
+
+    for (let [key, value] of Object.entries(bests['heartrate'])) {
+      if (bests['heartrate'][key] > actor.bests['heartrate'][key]) {
+        actor.bests['heartrate'][key] = value
+      }
+    }
+    
   } catch (e) {
     console.log(e)
   }
