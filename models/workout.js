@@ -36,9 +36,8 @@ Workout.light = function () {
 }
 
 Workout.getTrainingLoad = async function (actor, date, daysToInclude = 42) {
-  // const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(moment(date.toISOString()), daysToInclude)
-  // const todayEffort = await Workout.getEffortToday(moment(date.toISOString()))
-  const start = moment(date.toISOString()).subtract(daysToInclude, 'days')
+  const start = moment(date.toISOString()).utc().subtract(daysToInclude, 'days')
+  date = date.utc()
   let trainingLoad = 0
   let todaysEffort = 0
   let count = 1

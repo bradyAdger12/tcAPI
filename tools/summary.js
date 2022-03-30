@@ -35,9 +35,8 @@ getSummary = async function (actor,startDate, endDate) {
     summary['distance'] += workout.length
     summary['workoutIds'].push(workout.id)
   }
-
-  summary['fitness'] = await Workout.getTrainingLoad(actor, moment(endDate.toString()))
-  summary['fatigue'] = await Workout.getTrainingLoad(actor, moment(endDate.toString()), 7)
+  summary['fitness'] = await Workout.getTrainingLoad(actor, moment(endDate.toISOString()))
+  summary['fatigue'] = await Workout.getTrainingLoad(actor, moment(endDate.toISOString()), 7)
   summary['form'] = Math.round(summary['fitness'] - summary['fatigue'])
   return summary
 }
