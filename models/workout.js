@@ -35,59 +35,7 @@ Workout.light = function () {
   return ['source', 'sourceId', 'bests', 'zones', 'createdAt', 'streams', 'updatedAt', 'geom']
 }
 
-Workout.getEffortToday = async function (date) {
-  start = moment(date.set({ 'hour': 0, 'minute': 0, 'seconds': 0 }).toISOString())
-  end = moment(date.set({ 'hour': 23, 'minute': 59, 'seconds': 59 }).toISOString())
-  let effort = 0
-  try {
-    const workouts = await Workout.findAll({
-      where: {
-        "started_at": {
-          [Op.and]: {
-            [Op.gte]: start,
-            [Op.lte]: date
-          }
-        }
-      }
-    })
-    for (const workout of workouts) {
-      if (workout.effort) {
-        effort += workout.effort
-      } else if (workout.hr_effort) {
-        effort += workout.hr_effort
-      }
-    }
-  } catch (e) { }
-  return effort
-}
-Workout.getTrainingLoadYesterday = async function (date, daysToInclude = 42) {
-  date = moment(date.toISOString()).subtract(1, 'days')
-  const start = moment(date.toISOString()).subtract(daysToInclude, 'days')
-  let fitness = 0
-  try {
-    const workouts = await Workout.findAll({
-      where: {
-        "started_at": {
-          [Op.and]: {
-            [Op.gte]: start.toISOString(),
-            [Op.lte]: date.toISOString()
-          }
-        }
-      }
-    })
-    for (const workout of workouts) {
-      if (workout.effort) {
-        fitness += workout.effort
-      } else if (workout.hr_effort) {
-        fitness += workout.hr_effort
-      }
-    }
-    fitness = fitness / daysToInclude
-  } catch (e) { }
-  return Math.round(fitness)
-}
-
-Workout.getTrainingLoad = async function (date, daysToInclude = 42) {
+Workout.getTrainingLoad = async function (actor, date, daysToInclude = 42) {
   // const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(moment(date.toISOString()), daysToInclude)
   // const todayEffort = await Workout.getEffortToday(moment(date.toISOString()))
   const start = moment(date.toISOString()).subtract(daysToInclude, 'days')
@@ -97,6 +45,7 @@ Workout.getTrainingLoad = async function (date, daysToInclude = 42) {
   try {
     const workouts = await Workout.findAll({
       where: {
+        user_id: actor.id,
         "started_at": {
           [Op.and]: {
             [Op.gte]: start.toISOString(),
@@ -117,7 +66,7 @@ Workout.getTrainingLoad = async function (date, daysToInclude = 42) {
       }
       // (1/7) x (1-1/7)^1 = 12.2%
       const weight = ((1 / daysToInclude) * Math.pow((1 - (1 / daysToInclude)), daysToInclude - count))
-      trainingLoad += todaysEffort * ( 1-weight)
+      trainingLoad += todaysEffort * (1 - weight)
       todaysEffort = 0
       start.add(1, 'days')
       count += 1
@@ -234,7 +183,6 @@ Workout.getBests = function (stream, hrZones, powerZones) {
       '5sec': 0,
       'max': 0
     }
-
   }
   if (watts.length > 0) {
     bests.hasWatts = true

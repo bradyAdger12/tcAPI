@@ -127,6 +127,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     let startDate = null
     let source_id = null
     let activity = null
+    let description = null
     let zones = null
     let bests = null
     const activityResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}`, headers)
@@ -135,6 +136,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
 
     //Assign values from response
     name = data.name
+    description = data.description
     duration = Math.round(data.moving_time)
     source_id = data.id.toString()
     length = Math.round(data.distance)
@@ -170,6 +172,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
       length: length,
       hr_effort: hrtss,
       effort: tss,
+      description: description,
       source: 'strava',
       activity: activity,
       source_id: source_id,

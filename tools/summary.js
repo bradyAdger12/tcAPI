@@ -1,11 +1,13 @@
 const Workout = require('../models/workout.js')
 const { Op } = require('sequelize')
 const moment = require('moment')
-getSummary = async function (startDate, endDate) {
+getSummary = async function (actor,startDate, endDate) {
+  console.log(actor.id)
   let workouts = await Workout.findAll({
     order: [
       ['started_at', 'DESC']],
     where: {
+      user_id: actor.id,
       "started_at": {
         [Op.and]: {
           [Op.gte]: startDate.toISOString(),
@@ -35,8 +37,8 @@ getSummary = async function (startDate, endDate) {
     summary['workoutIds'].push(workout.id)
   }
 
-  summary['fitness'] = await Workout.getTrainingLoad(moment(endDate.toString()))
-  summary['fatigue'] = await Workout.getTrainingLoad(moment(endDate.toString()), 7)
+  summary['fitness'] = await Workout.getTrainingLoad(actor, moment(endDate.toString()))
+  summary['fatigue'] = await Workout.getTrainingLoad(actor, moment(endDate.toString()), 7)
   summary['form'] = Math.round(summary['fitness'] - summary['fatigue'])
   return summary
 }

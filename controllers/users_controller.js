@@ -108,8 +108,8 @@ router.get('/me/training_load', middleware.authenticateToken, async (req, res) =
   const date = req.query.date
   const trainingLoad = {}
   try {
-    trainingLoad['fitness'] = await Workout.getTrainingLoad(moment(date).endOf('day'))
-    trainingLoad['fatigue'] = await Workout.getTrainingLoad(moment(date).endOf('day'), 7)
+    trainingLoad['fitness'] = await Workout.getTrainingLoad(req.actor, moment(date).endOf('day'))
+    trainingLoad['fatigue'] = await Workout.getTrainingLoad(req.actor, moment(date).endOf('day'), 7)
     trainingLoad['form'] = Math.round(trainingLoad['fitness'] - trainingLoad['fatigue'])
     res.json(trainingLoad)
   } catch (error) {
@@ -293,6 +293,7 @@ router.post('/register', async (req, res) => {
   const email = req.body.email
   const rawPassword = req.body.password
   const name = req.body.display_name
+
   try {
 
     //Throw error if field are not present
@@ -316,6 +317,26 @@ router.post('/register', async (req, res) => {
     }
     if (req.body.threshold_power) {
       req.body.power_zones = User.getPowerZones(req.body.threshold_power)
+    }
+    req.body.bests = {
+      'heartrate': {
+        '1hr': 0,
+        '20min': 0,
+        '10min': 0,
+        '5min': 0,
+        'max': 0
+      },
+      'watts': {
+        '1hr': 0,
+        '20min': 0,
+        '10min': 0,
+        '5min': 0,
+        '2min': 0,
+        '1min': 0,
+        '30sec': 0,
+        '5sec': 0,
+        'max': 0
+      }
     }
     const result = await User.create(
       req.body

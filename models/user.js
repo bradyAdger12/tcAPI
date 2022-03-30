@@ -55,6 +55,7 @@ User.init({
   email: { type: Sequelize.STRING, allowNull: false },
   display_name: { type: Sequelize.STRING, allowNull: false },
   gender: Sequelize.STRING,
+  bests: { type: Sequelize.JSONB, defaultValue: {} },
   hr_zones: { type: Sequelize.JSONB, defaultValue: [] },
   power_zones: { type: Sequelize.JSONB, defaultValue: [] },
   max_hr: Sequelize.INTEGER,
