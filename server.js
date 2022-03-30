@@ -43,7 +43,7 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use('/users', require('./controllers/users_controller'))
-app.use('/recordings', require('./controllers/recordings_controller'))
+app.use('/workouts', require('./controllers/workouts_controller'))
 app.use('/strava', require('./controllers/strava_controller'))
 
 app.get('/', (req, res) => {

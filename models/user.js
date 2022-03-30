@@ -1,6 +1,6 @@
 const sequelize = require('../database.js')
 const { Sequelize, Model } = require('sequelize');
-const Recording = require('./recording.js')
+const Workout = require('./workout.js')
 
 class User extends Model {
 }
@@ -55,6 +55,7 @@ User.init({
   email: { type: Sequelize.STRING, allowNull: false },
   display_name: { type: Sequelize.STRING, allowNull: false },
   gender: Sequelize.STRING,
+  bests: { type: Sequelize.JSONB, defaultValue: {} },
   hr_zones: { type: Sequelize.JSONB, defaultValue: [] },
   power_zones: { type: Sequelize.JSONB, defaultValue: [] },
   max_hr: Sequelize.INTEGER,
@@ -71,8 +72,8 @@ User.init({
   modelName: 'users' // We need to choose the model name
 });
 
-User.hasMany(Recording, { constraints: false, foreignKey: 'user_id' })
-// Recording.hasOne(User)
+User.hasMany(Workout, { constraints: false, foreignKey: 'user_id' })
+// Workout.hasOne(User)
 
 
 
