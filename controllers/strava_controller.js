@@ -123,14 +123,12 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     let name = null
     let duration = null
     let length = null
-    let hrtss = null
-    let tss = null
-    let startDate = null
+    let started_at = null
     let source_id = null
+    let source = null
     let activity = null
+    let streams = null
     let description = null
-    let zones = null
-    let bests = null
     const activityResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}`, headers)
     const streamResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}/streams?key_by_type=time&keys=heartrate,watts`, headers)
     const data = activityResponse.data
@@ -138,52 +136,15 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     //Assign values from response
     name = data.name
     description = data.description
+    source = 'strava'
     duration = Math.round(data.moving_time)
     source_id = data.id.toString()
     length = Math.round(data.distance)
-    startDate = data.start_date
+    started_at = data.start_date
+    streams = streamResponse.data
     activity = data.type?.toLowerCase()
-    if (streamResponse.data) {
-      streams = streamResponse.data
-      zones = Workout.buildZoneDistribution(streamResponse.data?.watts?.data, streamResponse.data?.heartrate?.data, actor.hr_zones, actor.power_zones)
-      bests = Workout.getBests(actor, streamResponse.data)
-    }
-    if (data.weighted_average_watts && actor.threshold_power) {
-      tss = Math.round(((duration * (data.weighted_average_watts * (data.weighted_average_watts / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
-    }
-    if (data.has_heartrate && streamResponse.data?.heartrate?.data) {
-      hrtss = Workout.findHRTSS(actor, streamResponse.data.heartrate.data)
-      hrtss = Math.round(hrtss * 100)
-    }
 
-    //Check if workout already exists in DB
-    const workout = await Workout.findOne({
-      where: {
-        source_id: source_id
-      },
-      attributes: { exclude: Workout.light() }
-    })
-    if (workout) {
-      return res.status(500).json({ message: 'Workout already exists!' })
-    }
-
-    // Create workout entry
-    const newWorkout = await Workout.create({
-      name: name,
-      length: length,
-      hr_effort: hrtss,
-      effort: tss,
-      description: description,
-      source: 'strava',
-      activity: activity,
-      source_id: source_id,
-      bests: bests,
-      zones: zones,
-      streams: streams,
-      duration: duration,
-      started_at: startDate,
-      user_id: actor.id
-    })
+    const newWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity })
 
     // Update user bests if necessary
     try {
@@ -195,6 +156,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
       user.bests = actor.bests
       await user.save()
     } catch (e) { }
+
     res.json(newWorkout)
   } catch (e) {
     console.log(e)

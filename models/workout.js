@@ -1,6 +1,7 @@
 const sequelize = require('../database.js')
 const { Sequelize, Model, Op } = require('sequelize');
 const _ = require('lodash')
+const User = require('./user.js')
 const moment = require('moment')
 
 class Workout extends Model {
@@ -14,7 +15,7 @@ Workout.init({
   activity: { type: Sequelize.STRING },
   duration: { type: Sequelize.INTEGER, allowNull: false },
   source: { type: Sequelize.STRING, allowNull: false },
-  source_id: { type: Sequelize.STRING, allowNull: false },
+  source_id: { type: Sequelize.STRING },
   user_id: Sequelize.INTEGER,
   geom: { type: Sequelize.GEOMETRY("MultiLineString", 4326) },
   hr_effort: Sequelize.INTEGER,
@@ -22,6 +23,8 @@ Workout.init({
   streams: Sequelize.JSONB,
   bests: Sequelize.JSONB,
   zones: Sequelize.JSONB,
+  is_completed: { type: Sequelize.BOOLEAN, defaultValue: true },
+  planned: Sequelize.JSONB,
   started_at: Sequelize.DATE,
   stopped_at: Sequelize.DATE
 }, {
@@ -31,8 +34,112 @@ Workout.init({
 });
 
 
+Workout.createWorkout = async function ({ actor, name, description, duration, length, source, source_id, started_at, normalizedPower, streams, activity }) {
+  let zones = null
+  let bests = null
+  let hrtss = null
+  let tss = null
+  if (streams) {
+    zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
+    bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
+  }
+  if (normalizedPower && actor.threshold_power) {
+    tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+  }
+  if (streams.heartrate?.data) {
+    hrtss = Workout.findHRTSS(actor, streams.heartrate?.data)
+    hrtss = Math.round(hrtss * 100)
+  }
+
+  //Check if workout already exists in DB
+  const workout = await Workout.findOne({
+    where: {
+      user_id: actor.id,
+      source_id: source_id
+    },
+    attributes: { exclude: Workout.light() }
+  })
+  if (workout) {
+    throw Error('Workout already exists!')
+  }
+
+  //Check if there is a planned workout on same day
+  const ended_at = moment(started_at).endOf('day')
+  started_at = moment(started_at)
+  const plannedWorkout = await Workout.findOne({
+    where: {
+      user_id: actor.id,
+      "started_at": {
+        [Op.and]: {
+          [Op.gte]: started_at.toISOString(),
+          [Op.lte]: ended_at.toISOString()
+        }
+      }
+    },
+    attributes: { exclude: Workout.light() }
+  })
+  if (plannedWorkout) {
+    plannedWorkout.name = name
+    plannedWorkout.length = length
+    plannedWorkout.hr_effort = hrtss
+    plannedWorkout.effort = tss
+    plannedWorkout.description = description
+    plannedWorkout.source = source
+    plannedWorkout.source_id = source_id
+    plannedWorkout.bests = bests
+    plannedWorkout.zones = zones
+    plannedWorkout.streams = streams
+    plannedWorkout.duration = duration
+    plannedWorkout.is_completed = true
+    plannedWorkout.started_at = started_at.toISOString()
+    await plannedWorkout.save()
+    return plannedWorkout
+  }
+
+  // Create workout entry
+  const newWorkout = await Workout.create({
+    name: name,
+    length: length,
+    hr_effort: hrtss,
+    effort: tss,
+    description: description,
+    source: source,
+    activity: activity,
+    source_id: source_id,
+    bests: bests,
+    zones: zones,
+    streams: streams,
+    duration: duration,
+    started_at: started_at,
+    user_id: actor.id
+  })
+  return newWorkout
+
+}
+
+
 Workout.light = function () {
   return ['source', 'sourceId', 'bests', 'zones', 'createdAt', 'streams', 'updatedAt', 'geom']
+}
+
+const average = function (array) {
+  let sum = 0
+  for (const item of array) {
+    sum += item
+  }
+  return sum / array.length
+}
+
+Workout.getNormalizedPower = function (watts) {
+  const averages = []
+  if (watts) {
+    for (let index = 0; index + 30 < watts.length; index++) {
+      const thirtySecondSlice = watts.slice(index, index + 30)
+      averages.push(Math.round(Math.pow(average(thirtySecondSlice), 4)))
+    }
+  }
+  const fourthPowerAverages = average(averages)
+  return Math.round(Math.pow(fourthPowerAverages, .25))
 }
 
 Workout.getTrainingLoad = async function (actor, date, daysToInclude = 42) {
@@ -157,9 +264,9 @@ buildStats = function (bests, list, listName, i, seconds, timeSliceName) {
   }
 }
 
-Workout.getBests = function (actor, stream) {
-  const heartrate = stream.heartrate?.data ?? []
-  const watts = stream.watts?.data ?? []
+Workout.getBests = function (actor, heartrateStream, wattsStream) {
+  const heartrate = heartrateStream ?? []
+  const watts = wattsStream ?? []
   const listLength = heartrate?.length || watts?.length
   const bests = {
     'hasHeartRate': false,
@@ -281,7 +388,7 @@ Workout.getBests = function (actor, stream) {
         actor.bests['heartrate'][key] = value
       }
     }
-    
+
   } catch (e) {
     console.log(e)
   }
