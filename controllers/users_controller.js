@@ -110,7 +110,9 @@ router.get('/me/training_load', middleware.authenticateToken, async (req, res) =
   try {
     trainingLoad['fitness'] = await Workout.getTrainingLoad(req.actor, moment(date).endOf('day'))
     trainingLoad['fatigue'] = await Workout.getTrainingLoad(req.actor, moment(date).endOf('day'), 7)
-    trainingLoad['form'] = Math.round(trainingLoad['fitness'] - trainingLoad['fatigue'])
+    const yesterdayFitness = await Workout.getTrainingLoad(req.actor, moment(date).subtract(1, 'days').endOf('day'))
+    const yesterdayFatigue = await Workout.getTrainingLoad(req.actor, moment(date).subtract(1, 'days').endOf('day'), 7)
+    trainingLoad['form'] = Math.round(yesterdayFitness - yesterdayFatigue)
     res.json(trainingLoad)
   } catch (error) {
     res.status(500).json({ message: error.message })

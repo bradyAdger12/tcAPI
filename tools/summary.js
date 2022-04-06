@@ -1,7 +1,7 @@
 const Workout = require('../models/workout.js')
 const { Op } = require('sequelize')
 const moment = require('moment')
-getSummary = async function (actor,startDate, endDate) {
+getSummary = async function (actor, startDate, endDate) {
   let workouts = await Workout.findAll({
     order: [
       ['started_at', 'DESC']],
@@ -37,7 +37,10 @@ getSummary = async function (actor,startDate, endDate) {
   }
   summary['fitness'] = await Workout.getTrainingLoad(actor, moment(endDate.toISOString()))
   summary['fatigue'] = await Workout.getTrainingLoad(actor, moment(endDate.toISOString()), 7)
-  summary['form'] = Math.round(summary['fitness'] - summary['fatigue'])
+  const yesterdayFitness = await Workout.getTrainingLoad(actor, moment(endDate).subtract(1, 'days').endOf('day'))
+  const yesterdayFatigue = await Workout.getTrainingLoad(actor, moment(endDate).subtract(1, 'days').endOf('day'), 7)
+
+  summary['form'] = Math.round(yesterdayFitness - yesterdayFatigue)
   return summary
 }
 

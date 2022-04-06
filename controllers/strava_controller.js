@@ -128,6 +128,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     let source = null
     let activity = null
     let streams = null
+    let normalizedPower = null
     let description = null
     const activityResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}`, headers)
     const streamResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}/streams?key_by_type=time&keys=heartrate,watts`, headers)
@@ -142,9 +143,10 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     length = Math.round(data.distance)
     started_at = data.start_date
     streams = streamResponse.data
+    normalizedPower = data.weighted_average_watts
     activity = data.type?.toLowerCase()
 
-    const newWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity })
+    const newWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower })
 
     // Update user bests if necessary
     try {
