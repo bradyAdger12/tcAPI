@@ -146,20 +146,20 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     normalizedPower = data.weighted_average_watts
     activity = data.type?.toLowerCase()
 
-    const newWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower })
+    const { newWorkout, prs }= await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower })
 
-    // Update user bests if necessary
-    try {
-      const user = await User.findOne({
-        where: {
-          id: actor.id
-        }
-      })
-      user.bests = actor.bests
-      await user.save()
-    } catch (e) { }
+    // // Update user bests if necessary
+    // try {
+    //   const user = await User.findOne({
+    //     where: {
+    //       id: actor.id
+    //     }
+    //   })
+    //   user.bests = actor.bests
+    //   await user.save()
+    // } catch (e) { }
 
-    res.json(newWorkout)
+    res.json({ newWorkout, prs })
   } catch (e) {
     console.log(e)
     res.status(500).json({ message: e.message })

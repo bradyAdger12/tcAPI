@@ -1,8 +1,8 @@
 const sequelize = require('../database.js')
 const { Sequelize, Model, Op } = require('sequelize');
 const _ = require('lodash')
-const User = require('./user.js')
 const moment = require('moment')
+const User = require('./user.js')
 
 class Workout extends Model {
 }
@@ -34,11 +34,13 @@ Workout.init({
 });
 
 
-Workout.createWorkout = async function ({ actor, name, description, duration, length, source, source_id, started_at, normalizedPower, streams, activity }) {
+
+Workout.createWorkout = async ({ actor, name, description, duration, length, source, source_id, started_at, normalizedPower, streams, activity, planned, is_completed = true }) => {
   let zones = null
   let bests = null
   let hrtss = null
   let tss = null
+  let prs = []
   if (streams) {
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
@@ -110,10 +112,15 @@ Workout.createWorkout = async function ({ actor, name, description, duration, le
     zones: zones,
     streams: streams,
     duration: duration,
+    is_completed: is_completed,
+    planned: planned,
     started_at: started_at,
     user_id: actor.id
   })
-  return newWorkout
+  if (newWorkout) {
+    prs = actor.hasPRs(bests)
+  }
+  return { newWorkout, prs }
 
 }
 

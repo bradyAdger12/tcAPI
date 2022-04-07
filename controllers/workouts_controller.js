@@ -7,7 +7,6 @@ const data = require('../stream_data.js')
 const _ = require('lodash')
 const { Op } = require('sequelize')
 const moment = require('moment')
-const cache = require('../cache.js')
 const getSummary = require('../tools/summary.js')
 
 // Workouts routes
@@ -178,15 +177,13 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
     const planned = req.body.planned
     const isPower = req.body.isPower
     const actor = req.actor
-    const startedAt = req.body.startedAt
+    const started_at = req.body.startedAt
     const length = 0
     const source = 'planned'
-    let hrtss = null
-    let tss = null
-    let normalizedPower = null
-    let bests = null
+    const is_completed = false
     const activity = 'ride'
-    let zones = null
+    const source_id = Math.random().toString(36).substring(0, 14)
+    let normalizedPower = null
     if (!name) {
       throw Error('Name is required.')
     } else if (!planned) {
@@ -195,7 +192,7 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
 
     //create planned workout
 
-    let totalDuration = 0
+    let duration = 0
     const dataType = isPower ? 'watts' : 'heartrate'
     let streams = {
       'heartrate': null,
@@ -206,48 +203,17 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
     for (const block of planned) {
       for (let i = 0; i < block.numSets; i++) {
         for (const set of block.sets) {
-          const duration = moment.duration(set.duration).asSeconds()
-          for (let sec = 0; sec < duration; sec++) {
+          const d = moment.duration(set.duration).asSeconds()
+          for (let sec = 0; sec < d; sec++) {
             streams[dataType]?.data.push(parseInt(set.value.toString()))
           }
-          totalDuration += duration
+          duration += d
         }
       }
     }
-
-    if (streams) {
-      if (streams.watts?.data) {
-        normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
-      }
-      zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
-      bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
-    }
-    if (normalizedPower && actor.threshold_power) {
-      tss = Math.round(((totalDuration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
-    }
-    if (streams.heartrate?.data) {
-      hrtss = Workout.findHRTSS(actor, streams.heartrate?.data)
-      hrtss = Math.round(hrtss * 100)
-    }
-
-    const newWorkout = await Workout.create({
-      name: name,
-      length: length,
-      hr_effort: hrtss,
-      effort: tss,
-      description: description,
-      source: source,
-      activity: activity,
-      bests: bests,
-      zones: zones,
-      streams: streams,
-      duration: totalDuration,
-      started_at: startedAt,
-      user_id: actor.id,
-      planned: planned,
-      is_completed: false
-    })
-    res.json(newWorkout)
+    normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
+    const plannedWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower, planned, is_completed })
+    res.json(plannedWorkout)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }

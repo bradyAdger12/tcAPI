@@ -5,9 +5,35 @@ const Workout = require('./workout.js')
 class User extends Model {
 }
 
-User.getPowerZones = function () {
-  return []
+User.prototype.hasPRs = function (bests) {
+  const prs = []
+  const timeRanges = [
+    "1hr",
+    "20min",
+    "10min",
+    "5min",
+    "2min",
+    "1min",
+    "30sec",
+    "5sec",
+    "max",
+  ]
+
+  for (const time of timeRanges) {
+    if (bests && bests['watts']) {
+      if (bests['watts'][time] >= this.bests['watts'][time]) {
+        prs.push({ type: 'watts', time: time, value: bests['watts'][time]})
+      }
+    }
+    if (bests && bests['heartrate']) {
+      if (bests['heartrate'][time] >= this.bests['heartrate'][time]) {
+        prs.push({ type: 'heartrate', time: time, value: bests['heartrate'][time] })
+      }
+    }
+  }
+  return prs
 }
+
 User.getHeartRateZones = function (thresh_hr) {
   if (thresh_hr) {
     return [{ title: 'Recovery', low: 0, high: Math.round(thresh_hr * .68) }, { title: 'Endurance', low: Math.round(thresh_hr * .69), high: Math.round(thresh_hr * .83) }, { title: 'Tempo', low: Math.round(thresh_hr * .84), high: Math.round(thresh_hr * .94) }, { title: 'Threshold', low: Math.round(thresh_hr * .95), high: Math.round(thresh_hr * 1.05) }, { title: 'VO2 Max', low: Math.round(thresh_hr * 1.06), high: 'MAX' }]
@@ -73,6 +99,7 @@ User.init({
 });
 
 User.hasMany(Workout, { constraints: false, foreignKey: 'user_id' })
+Workout.belongsTo(User, { foreignKey: 'user_id' })
 // Workout.hasOne(User)
 
 
