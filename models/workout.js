@@ -40,7 +40,6 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   let bests = null
   let hrtss = null
   let tss = null
-  let prs = []
   if (streams) {
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
@@ -99,7 +98,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   }
 
   // Create workout entry
-  const newWorkout = await Workout.create({
+  let newWorkout = await Workout.create({
     name: name,
     length: length,
     hr_effort: hrtss,
@@ -117,8 +116,11 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     started_at: started_at,
     user_id: actor.id
   })
+  newWorkout = newWorkout.toJSON()
   if (newWorkout) {
     actor.changed('bests', true)
+    const prs = actor.getPRs(bests)
+    newWorkout.prs = prs
     await actor.save()
   }
   return newWorkout
@@ -396,7 +398,6 @@ Workout.getBests = function (actor, heartrateStream, wattsStream) {
         actor.bests['heartrate'][key] = value
       }
     }
-
   } catch (e) {
     console.log(e)
   }

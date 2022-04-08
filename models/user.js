@@ -5,6 +5,51 @@ const Workout = require('./workout.js')
 class User extends Model {
 }
 
+User.prototype.getPRs = function (workoutBests) {
+  const prs = []
+  const timeRanges = [
+    "1hr",
+    "20min",
+    "10min",
+    "5min",
+    "2min",
+    "1min",
+    "30sec",
+    "5sec",
+    "max",
+  ]
+
+  for (const time of timeRanges) {
+    if (workoutBests && workoutBests['watts']) {
+      if (workoutBests['watts'][time] >= this.bests['watts'][time]) {
+        prs.push({ type: 'watts', time: time, value: workoutBests['watts'][time]})
+      }
+    }
+    if (workoutBests && workoutBests['heartrate']) {
+      if (workoutBests['heartrate'][time] >= this.bests['heartrate'][time]) {
+        prs.push({ type: 'heartrate', time: time, value: workoutBests['heartrate'][time] })
+      }
+    }
+  }
+
+  //Determine if user fitness benchmarks should be increased
+  if (this.bests['heartrate']['max'] > this.max_hr) {
+    this.max_hr = this.bests['heartrate']['max']
+    prs.unshift({ type: 'heartrate', value: this.max_hr, name: 'Max HR'})
+  }
+  if (((this.bests['heartrate']['20min'] + this.bests['heartrate']['10min']) / 2) * .95 > this.threshold_hr) {
+    this.threshold_hr = Math.round(((this.bests['heartrate']['20min'] + this.bests['heartrate']['10min']) / 2) * .95)
+    this.hr_zones = User.getHeartRateZones(this.threshold_hr)
+    prs.unshift({ type: 'heartrate', value: this.threshold_hr, name: 'Threshold HR'})
+  }
+  if ((this.bests['watts']['20min'] * .95) > this.threshold_power) {
+    this.threshold_power = Math.round(this.bests['watts']['20min'] * .95)
+    this.power_zones = User.getPowerZones(this.threshold_power)
+    prs.unshift({ type: 'watts', value: this.threshold_power, name: 'FTP'})
+  }
+  return prs
+}
+
 User.getHeartRateZones = function (thresh_hr) {
   if (thresh_hr) {
     return [{ title: 'Recovery', low: 0, high: Math.round(thresh_hr * .68) }, { title: 'Endurance', low: Math.round(thresh_hr * .69), high: Math.round(thresh_hr * .83) }, { title: 'Tempo', low: Math.round(thresh_hr * .84), high: Math.round(thresh_hr * .94) }, { title: 'Threshold', low: Math.round(thresh_hr * .95), high: Math.round(thresh_hr * 1.05) }, { title: 'VO2 Max', low: Math.round(thresh_hr * 1.06), high: 'MAX' }]
