@@ -67,7 +67,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
 
   //Check if there is a planned workout on same day
   const ended_at = moment(started_at).endOf('day')
-  started_at = moment(started_at)
+  started_at = moment(started_at).startOf('day')
   const plannedWorkout = await Workout.findOne({
     where: {
       user_id: actor.id,
@@ -118,9 +118,10 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     user_id: actor.id
   })
   if (newWorkout) {
-    prs = actor.hasPRs(bests)
+    actor.changed('bests', true)
+    await actor.save()
   }
-  return { newWorkout, prs }
+  return newWorkout
 
 }
 
