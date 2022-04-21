@@ -26,6 +26,9 @@ getSummary = async function (actor, startDate, endDate) {
     'workoutIds': []
   }
   for (const workout of workouts) {
+    if (workout.planned && !workout.is_completed && moment().endOf('day').isAfter(moment(workout.started_at).endOf('day'))) {
+      continue
+    }
     if (workout.effort) {
       summary['effort'] += workout.effort
     } else if (workout.hr_effort) {
