@@ -1,10 +1,9 @@
 const Workout = require('../models/workout')
-const User = require('../models/user')
 const express = require('express')
 const router = express.Router()
 const middleware = require('../middleware')
 const axios = require('axios')
-const moment = require('moment')
+const interpolateArray = require('../tools/interpolation.js')
 
 
 
@@ -131,7 +130,7 @@ router.post('/activity/:id/import', middleware.authenticateToken, async (req, re
     let normalizedPower = null
     let description = null
     const activityResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}`, headers)
-    const streamResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}/streams?key_by_type=time&keys=heartrate,watts`, headers)
+    const streamResponse = await axios.get(`https://www.strava.com/api/v3/activities/${id}/streams?key_by_type=true&keys=heartrate,watts,distance&series_type=time`, headers)
     const data = activityResponse.data
 
     //Assign values from response

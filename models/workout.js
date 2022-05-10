@@ -33,6 +33,20 @@ Workout.init({
   modelName: 'workouts' // We need to choose the model name
 });
 
+interpolateStreams = function (streams) {
+  if (streams.time) {
+    const fitCount = streams.time.data[streams.time.data.length - 1]
+    if (streams.heartrate) {
+      const heartrateArray = interpolateArray(streams.heartrate.data, fitCount)
+      streams.heartrate.data = heartrateArray
+    } if (streams.watts) {
+      const wattsArray = interpolateArray(streams.watts.data, fitCount)
+      streams.watts.data = wattsArray
+    }
+  }
+  return streams
+}
+
 
 
 Workout.createWorkout = async ({ actor, name, description, duration, length, source, source_id, started_at, normalizedPower, streams, activity, planned, is_completed = true }) => {
@@ -41,6 +55,8 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   let hrtss = null
   let tss = null
   if (streams) {
+    console.log(streams)
+    streams = interpolateStreams(streams)
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
   }
