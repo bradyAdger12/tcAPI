@@ -2,6 +2,7 @@ const sequelize = require('../database.js')
 const { Sequelize, Model, Op } = require('sequelize');
 const _ = require('lodash')
 const moment = require('moment')
+const User = require('./user.js')
 
 class Workout extends Model {
 }
@@ -14,7 +15,7 @@ Workout.init({
   activity: { type: Sequelize.STRING },
   duration: { type: Sequelize.INTEGER, allowNull: false },
   source: { type: Sequelize.STRING, allowNull: false },
-  source_id: { type: Sequelize.STRING, allowNull: false },
+  source_id: { type: Sequelize.STRING },
   user_id: Sequelize.INTEGER,
   geom: { type: Sequelize.GEOMETRY("MultiLineString", 4326) },
   hr_effort: Sequelize.INTEGER,
@@ -22,6 +23,8 @@ Workout.init({
   streams: Sequelize.JSONB,
   bests: Sequelize.JSONB,
   zones: Sequelize.JSONB,
+  is_completed: { type: Sequelize.BOOLEAN, defaultValue: true },
+  planned: Sequelize.JSONB,
   started_at: Sequelize.DATE,
   stopped_at: Sequelize.DATE
 }, {
@@ -30,15 +33,148 @@ Workout.init({
   modelName: 'workouts' // We need to choose the model name
 });
 
+interpolateStreams = function (streams) {
+  if (streams.time) {
+    const fitCount = streams.time.data[streams.time.data.length - 1]
+    if (streams.heartrate) {
+      const heartrateArray = interpolateArray(streams.heartrate.data, fitCount)
+      streams.heartrate.data = heartrateArray
+    } if (streams.watts) {
+      const wattsArray = interpolateArray(streams.watts.data, fitCount)
+      streams.watts.data = wattsArray
+    }
+  }
+  return streams
+}
+
+
+
+Workout.createWorkout = async ({ actor, name, description, duration, length, source, source_id, started_at, normalizedPower, streams, activity, planned, is_completed = true }) => {
+  let zones = null
+  let bests = null
+  let hrtss = null
+  let tss = null
+  if (streams) {
+    console.log(streams)
+    streams = interpolateStreams(streams)
+    zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
+    bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
+  }
+  if (normalizedPower && actor.threshold_power) {
+    tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+  }
+  if (streams.heartrate?.data) {
+    hrtss = Workout.findHRTSS(actor, streams.heartrate?.data)
+    hrtss = Math.round(hrtss * 100)
+  }
+
+  //Check if workout already exists in DB
+  const workout = await Workout.findOne({
+    where: {
+      user_id: actor.id,
+      source_id: source_id
+    },
+    attributes: { exclude: Workout.light() }
+  })
+  if (workout) {
+    throw Error('Workout already exists!')
+  }
+
+  //Check if there is a planned workout on same day
+  const ended_at = moment(started_at).endOf('day')
+  started_at = moment(started_at).startOf('day')
+  const plannedWorkout = await Workout.findOne({
+    where: {
+      planned: {
+        [Op.ne]: null
+      },
+      is_completed: false,
+      user_id: actor.id,
+      "started_at": {
+        [Op.and]: {
+          [Op.gte]: started_at.toISOString(),
+          [Op.lte]: ended_at.toISOString()
+        }
+      }
+    },
+    attributes: { exclude: Workout.light() }
+  })
+  if (plannedWorkout) {
+    plannedWorkout.name = name
+    plannedWorkout.length = length
+    plannedWorkout.hr_effort = hrtss
+    plannedWorkout.effort = tss
+    plannedWorkout.description = description
+    plannedWorkout.source = source
+    plannedWorkout.source_id = source_id
+    plannedWorkout.bests = bests
+    plannedWorkout.zones = zones
+    plannedWorkout.streams = streams
+    plannedWorkout.duration = duration
+    plannedWorkout.is_completed = true
+    plannedWorkout.started_at = started_at.toISOString()
+    await plannedWorkout.save()
+    return plannedWorkout
+  }
+
+  // Create workout entry
+  let newWorkout = await Workout.create({
+    name: name,
+    length: length,
+    hr_effort: hrtss,
+    effort: tss,
+    description: description,
+    source: source,
+    activity: activity,
+    source_id: source_id,
+    bests: bests,
+    zones: zones,
+    streams: streams,
+    duration: duration,
+    is_completed: is_completed,
+    planned: planned,
+    started_at: started_at,
+    user_id: actor.id
+  })
+  newWorkout = newWorkout.toJSON()
+  if (newWorkout) {
+    actor.changed('bests', true)
+    const prs = actor.getPRs(bests)
+    newWorkout.prs = prs
+    await actor.save()
+  }
+  return newWorkout
+
+}
+
 
 Workout.light = function () {
   return ['source', 'sourceId', 'bests', 'zones', 'createdAt', 'streams', 'updatedAt', 'geom']
 }
 
+const average = function (array) {
+  let sum = 0
+  for (const item of array) {
+    sum += item
+  }
+  return sum / array.length
+}
+
+Workout.getNormalizedPower = function (watts) {
+  const averages = []
+  if (watts) {
+    for (let index = 0; index + 30 < watts.length; index++) {
+      const thirtySecondSlice = watts.slice(index, index + 30)
+      averages.push(Math.round(Math.pow(average(thirtySecondSlice), 4)))
+    }
+  }
+  const fourthPowerAverages = average(averages)
+  return Math.round(Math.pow(fourthPowerAverages, .25))
+}
+
 Workout.getTrainingLoad = async function (actor, date, daysToInclude = 42) {
-  // const yesterdayTrainingLoad = await Workout.getTrainingLoadYesterday(moment(date.toISOString()), daysToInclude)
-  // const todayEffort = await Workout.getEffortToday(moment(date.toISOString()))
-  const start = moment(date.toISOString()).subtract(daysToInclude, 'days')
+  const start = moment(date.toISOString()).utc().subtract(daysToInclude, 'days')
+  date = date.utc()
   let trainingLoad = 0
   let todaysEffort = 0
   let count = 1
@@ -57,6 +193,11 @@ Workout.getTrainingLoad = async function (actor, date, daysToInclude = 42) {
     while (start.format('D MMMM YYYY') != date.format('D MMMM YYYY')) {
       for (const workout of workouts) {
         if (moment(workout.started_at).format('D MMMM YYYY') == start.format('D MMMM YYYY')) {
+
+          //Dont add incomplete workouts to training load numbers
+          if (workout.planned && !workout.is_completed && moment().endOf('day').isAfter(moment(workout.started_at).endOf('day'))) {
+            continue
+          }
           if (workout.effort) {
             todaysEffort += workout.effort
           } else if (workout.hr_effort) {
@@ -158,9 +299,9 @@ buildStats = function (bests, list, listName, i, seconds, timeSliceName) {
   }
 }
 
-Workout.getBests = function (actor, stream) {
-  const heartrate = stream.heartrate?.data ?? []
-  const watts = stream.watts?.data ?? []
+Workout.getBests = function (actor, heartrateStream, wattsStream) {
+  const heartrate = heartrateStream ?? []
+  const watts = wattsStream ?? []
   const listLength = heartrate?.length || watts?.length
   const bests = {
     'hasHeartRate': false,
@@ -282,7 +423,6 @@ Workout.getBests = function (actor, stream) {
         actor.bests['heartrate'][key] = value
       }
     }
-    
   } catch (e) {
     console.log(e)
   }

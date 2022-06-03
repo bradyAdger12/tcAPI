@@ -12,7 +12,8 @@
   "devDependencies": {
     "crypto": "^1.0.1",
     "dotenv": "^16.0.0",
-    "nodemon": "^2.0.15"
+    "nodemon": "^2.0.15",
+    "sequelize-cli": "^6.4.1"
   },
   "dependencies": {
     "@mapbox/polyline": "^1.1.1",
@@ -26,6 +27,7 @@
     "pg": "^8.7.3",
     "redis": "^4.0.4",
     "sequelize": "^6.17.0",
+    "sequelize-auto-migrations": "^1.0.3",
     "swagger-jsdoc": "^6.1.0",
     "swagger-ui-express": "^4.3.0"
   }

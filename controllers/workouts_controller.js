@@ -7,7 +7,6 @@ const data = require('../stream_data.js')
 const _ = require('lodash')
 const { Op } = require('sequelize')
 const moment = require('moment')
-const cache = require('../cache.js')
 const getSummary = require('../tools/summary.js')
 
 // Workouts routes
@@ -50,6 +49,113 @@ router.get('/stats/test', async (req, res) => {
 /**
  * @swagger
  * 
+ * /workouts/update/planned/{id}:
+ *  get:
+ *    tags: [Workouts]
+ *    summary: Create a future workout
+ *    parameters:
+ *      - name: id
+ *        in: path
+ *        required: true
+ *        description: ID of the workout
+ *        schema:
+ *           type: integer
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res) => {
+  try {
+    const name = req.body.name
+    const id = req.params.id
+    const description = req.body.description
+    const planned = req.body.planned
+    const isPower = req.body.isPower
+    const actor = req.actor
+    let hrtss = null
+    let tss = null
+    let normalizedPower = null
+    let zones = null
+    if (!name) {
+      throw Error('Name is required.')
+    } else if (!planned) {
+      throw Error('Workout must have blocks.')
+    }
+
+    const plannedWorkout = await Workout.findOne({
+      where: {
+        id: id
+      }
+    })
+
+    if (!plannedWorkout) {
+      throw Error('Workout not found!')
+    }
+
+    if (isPower) {
+      plannedWorkout.hr_effort = null
+    } else {
+      plannedWorkout.effort = null
+    }
+
+    //Update planned workout
+    let totalDuration = 0
+    const dataType = isPower ? 'watts' : 'heartrate'
+    let streams = {
+      'heartrate': null,
+      'watts': null
+    }
+    streams[dataType] = {}
+    streams[dataType]['data'] = []
+    for (const block of planned) {
+      for (let i = 0; i < block.numSets; i++) {
+        for (const set of block.sets) {
+          const duration = moment.duration(set.duration).asSeconds()
+          for (let sec = 0; sec < duration; sec++) {
+            streams[dataType]?.data.push(parseInt(set.value.toString()))
+          }
+          totalDuration += duration
+        }
+      }
+    }
+
+    if (streams) {
+      if (streams.watts?.data) {
+        normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
+      }
+      zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
+    }
+    if (normalizedPower && actor.threshold_power) {
+      tss = Math.round(((totalDuration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+    }
+    if (streams.heartrate?.data) {
+      hrtss = Workout.findHRTSS(actor, streams.heartrate?.data)
+      hrtss = Math.round(hrtss * 100)
+    }
+    plannedWorkout.name = name
+    plannedWorkout.description = description
+    plannedWorkout.effort = tss
+    plannedWorkout.hr_effort = hrtss
+    plannedWorkout.streams = streams
+    plannedWorkout.planned = planned
+    plannedWorkout.duration = totalDuration
+    plannedWorkout.zones = zones
+    await plannedWorkout.save()
+    res.json(plannedWorkout)
+  } catch (e) {
+    res.status(500).json({ message: e.message })
+  }
+})
+
+/**
+ * @swagger
+ * 
  * /workouts/create/planned:
  *  get:
  *    tags: [Workouts]
@@ -66,7 +172,48 @@ router.get('/stats/test', async (req, res) => {
  */
 router.post('/create/planned', middleware.authenticateToken, async (req, res) => {
   try {
-    console.log(req.body)
+    const name = req.body.name
+    const description = req.body.description
+    const planned = req.body.planned
+    const isPower = req.body.isPower
+    const actor = req.actor
+    const started_at = req.body.startedAt
+    const length = 0
+    const source = 'planned'
+    const is_completed = false
+    const activity = 'ride'
+    const source_id = Math.random().toString(36).substring(0, 14)
+    let normalizedPower = null
+    if (!name) {
+      throw Error('Name is required.')
+    } else if (!planned) {
+      throw Error('Workout must have blocks.')
+    }
+
+    //create planned workout
+
+    let duration = 0
+    const dataType = isPower ? 'watts' : 'heartrate'
+    let streams = {
+      'heartrate': null,
+      'watts': null
+    }
+    streams[dataType] = {}
+    streams[dataType]['data'] = []
+    for (const block of planned) {
+      for (let i = 0; i < block.numSets; i++) {
+        for (const set of block.sets) {
+          const d = moment.duration(set.duration).asSeconds()
+          for (let sec = 0; sec < d; sec++) {
+            streams[dataType]?.data.push(parseInt(set.value.toString()))
+          }
+          duration += d
+        }
+      }
+    }
+    normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
+    const plannedWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower, planned, is_completed })
+    res.json(plannedWorkout)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }
@@ -152,7 +299,8 @@ router.get('/me', middleware.authenticateToken, async (req, res) => {
     const endsAt = req.query.endsAt
     const actorId = req.actor.id
     const where = {
-      user_id: actorId
+      user_id: actorId,
+      is_completed: true
     }
     if (startsAt && endsAt) {
       where[
@@ -259,7 +407,7 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
 
       currentDate.add(1, 'days')
     }
-    res.json({ dates })
+    res.json(dates)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }
@@ -349,6 +497,12 @@ router.put('/:id', middleware.authenticateToken, async (req, res) => {
     if (_.has(req.body, 'started_at')) {
       workout.started_at = req.body.started_at
     }
+    if (_.has(req.body, 'name')) {
+      workout.name = req.body.name
+    }
+    if (_.has(req.body, 'description')) {
+      workout.description = req.body.description
+    }
     await workout.save()
     res.json(workout)
   } catch (e) {
@@ -420,7 +574,9 @@ router.get('/me/stats', middleware.authenticateToken, async (req, res) => {
     }
     const workouts = await Workout.findAll({
       where: {
+
         user_id: actor.id,
+        is_completed: true,
         "started_at": {
           [Op.and]: {
             [Op.gte]: starts_at,
