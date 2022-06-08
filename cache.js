@@ -1,8 +1,13 @@
 const redis = require('redis')
 const port = process.env.REDIS_PORT || 6379
-const client = redis.createClient({
+let client = null
+if (port) {
+  client = redis.createClient(port)
+} else {
+client = redis.createClient({
   url: 'redis://red-cacivdkobjdalmrra6ag:6379'
 })
+}
 
 client.connect()
 

@@ -159,6 +159,12 @@ router.put('/update/me', middleware.authenticateToken, async (req, res) => {
       if (_.has(req.body, 'max_hr')) {
         user.max_hr = req.body.max_hr
       }
+      if (_.has(req.body, 'gender')) {
+        user.gender = req.body.gender
+      }
+      if (_.has(req.body, 'resting_hr')) {
+        user.resting_hr = req.body.resting_hr
+      }
       if (_.has(req.body, 'threshold_hr')) {
         user.threshold_hr = req.body.threshold_hr && req.body.threshold_hr != '' ? req.body.threshold_hr : null
         user.hr_zones = User.getHeartRateZones(user.threshold_hr)
