@@ -55,7 +55,6 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   let hrtss = null
   let tss = null
   if (streams) {
-    console.log(streams)
     streams = interpolateStreams(streams)
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)

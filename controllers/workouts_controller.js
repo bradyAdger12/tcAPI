@@ -359,7 +359,8 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
     let startsAt = req.query.startsAt
     let endsAt = req.query.endsAt
     if (startsAt) {
-      startsAt = moment(startsAt).startOf('day').toISOString()
+      startsAt = moment(startsAt).startOf('day').utc().toISOString()
+      console.log(startsAt)
     }
     if (endsAt) {
       endsAt = moment(endsAt).endOf('day').toISOString()
@@ -384,8 +385,7 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
       attributes: { exclude: Workout.light() }
     })
 
-    const currentDate = moment(startsAt)
-    console.log(currentDate)
+    const currentDate = moment(startsAt) 
     const endDate = moment(endsAt).add(1, 'days')
     const dates = []
     let summary = null
