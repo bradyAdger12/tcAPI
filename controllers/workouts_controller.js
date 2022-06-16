@@ -359,7 +359,7 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
     let startsAt = req.query.startsAt
     let endsAt = req.query.endsAt
     if (startsAt) {
-      startsAt = moment(startsAt).startOf('day').add(1, 'days').toISOString()
+      startsAt = moment(startsAt).toISOString()
     }
     if (endsAt) {
       endsAt = moment(endsAt).endOf('day').toISOString()
