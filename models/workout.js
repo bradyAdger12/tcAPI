@@ -99,7 +99,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     },
     attributes: { exclude: Workout.light() }
   })
-  if (plannedWorkout) {
+  if (plannedWorkout && is_completed) {
     plannedWorkout.name = name
     plannedWorkout.length = length
     plannedWorkout.hr_effort = hrtss
@@ -303,7 +303,7 @@ Workout.getBests = function (actor, heartrateStream, wattsStream) {
   const heartrate = heartrateStream ?? []
   const watts = wattsStream ?? []
   const listLength = heartrate?.length || watts?.length
-  const bests = {
+  const bests = actor.bests ?? {
     'hasHeartRate': false,
     'heartrate': {
       '1hr': 0,
