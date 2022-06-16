@@ -256,7 +256,7 @@ router.get('/weekly_summary', middleware.authenticateToken, async (req, res) => 
     if (!startDate || !endDate) {
       throw Error('startDate and endDate are required')
     }
-    summary = await getSummary(req.actor, moment(startDate).startOf('day'), moment(endDate).endOf('day'))
+    summary = await getSummary(req.actor, moment(startDate), moment(endDate).endOf('day'))
     res.json({ summary })
   } catch (e) {
     res.status(500).json({ message: e.message })
@@ -398,7 +398,7 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
       })
 
       if (currentDate.day() == 1) {
-        let summaryStart = moment(currentDate.toISOString()).startOf('day')
+        let summaryStart = moment(currentDate.toISOString())
         let summaryEnd = moment(currentDate.toISOString()).add(6, 'days').endOf('day')
         summary = await getSummary(req.actor, summaryStart, summaryEnd)
       } else if (currentDate.day() == 0) {

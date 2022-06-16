@@ -81,7 +81,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
 
   //Check if there is a planned workout on same day
   const ended_at = moment(started_at).endOf('day')
-  started_at = moment(started_at).startOf('day')
+  started_at = moment(started_at)
   const plannedWorkout = await Workout.findOne({
     where: {
       planned: {
