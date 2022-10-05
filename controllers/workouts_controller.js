@@ -383,31 +383,31 @@ router.get('/me/calendar', [middleware.authenticateToken], async (req, res) => {
       where,
       attributes: { exclude: Workout.light() }
     })
+    res.json(workouts)
 
-    const currentDate = moment(startsAt) 
-    const endDate = moment(endsAt).add(1, 'days')
-    const dates = []
-    let summary = null
-    while (currentDate.format('D MMMM YYYY') != endDate.format('D MMMM YYYY')) {
-      let filteredWorkouts = _.filter(workouts, (workout) => {
-        return moment(workout.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
-      })
-      dates.push({
-        date: currentDate.toISOString(),
-        workouts: filteredWorkouts
-      })
+    // const currentDate = moment(startsAt) 
+    // const endDate = moment(endsAt).add(1, 'days')
+    // const dates = []
+    // let summary = null
+    // while (currentDate.format('D MMMM YYYY') != endDate.format('D MMMM YYYY')) {
+    //   let filteredWorkouts = _.filter(workouts, (workout) => {
+    //     return moment(workout.started_at).format('D MMMM YYYY') == currentDate.format('D MMMM YYYY')
+    //   })
+    //   dates.push({
+    //     date: currentDate.toISOString(),
+    //     workouts: filteredWorkouts
+    //   })
 
-      if (currentDate.day() == 1) {
-        let summaryStart = moment(currentDate.toISOString())
-        let summaryEnd = moment(currentDate.toISOString()).add(6, 'days').endOf('day')
-        summary = await getSummary(req.actor, summaryStart, summaryEnd)
-      } else if (currentDate.day() == 0) {
-        dates.push({ summary })
-      }
+    //   if (currentDate.day() == 1) {
+    //     let summaryStart = moment(currentDate.toISOString())
+    //     let summaryEnd = moment(currentDate.toISOString()).add(6, 'days').endOf('day')
+    //     summary = await getSummary(req.actor, summaryStart, summaryEnd)
+    //   } else if (currentDate.day() == 0) {
+    //     dates.push({ summary })
+    //   }
 
-      currentDate.add(1, 'days')
-    }
-    res.json(dates)
+    //   currentDate.add(1, 'days')
+    // }
   } catch (e) {
     res.status(500).json({ message: e.message })
   }

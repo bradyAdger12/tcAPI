@@ -302,7 +302,7 @@ Workout.getBests = function (actor, heartrateStream, wattsStream) {
   const heartrate = heartrateStream ?? []
   const watts = wattsStream ?? []
   const listLength = heartrate?.length || watts?.length
-  const bests = actor.bests ?? {
+  const bests = {
     'hasHeartRate': false,
     'heartrate': {
       '1hr': 0,
