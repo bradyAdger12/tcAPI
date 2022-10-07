@@ -5,7 +5,7 @@ if (port) {
   client = redis.createClient(port)
 } else {
 client = redis.createClient({
-  url: 'redis://red-cacivdkobjdalmrra6ag:6379'
+  url: 'rediss://red-cacivdkobjdalmrra6ag:QhnmQZoq2GV6dz4N8gVPOaksMEhUqElk@oregon-redis.render.com'
 })
 }
 
