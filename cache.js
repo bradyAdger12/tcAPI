@@ -1,11 +1,11 @@
 const redis = require('redis')
-const port = process.env.REDIS_PORT || 6379
+const port = process.env.REDIS_PORT || null
 let client = null
 if (port) {
   client = redis.createClient(port)
 } else {
 client = redis.createClient({
-  url: 'rediss://red-cacivdkobjdalmrra6ag:QhnmQZoq2GV6dz4N8gVPOaksMEhUqElk@oregon-redis.render.com'
+  url: 'rediss://red-cacivdkobjdalmrra6ag:QhnmQZoq2GV6dz4N8gVPOaksMEhUqElk@oregon-redis.render.com:6379'
 })
 }
 
