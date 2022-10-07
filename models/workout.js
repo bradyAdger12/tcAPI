@@ -187,7 +187,8 @@ Workout.getTrainingLoad = async function (actor, date, daysToInclude = 42) {
             [Op.lte]: date.toISOString()
           }
         }
-      }
+      },
+      attributes: { exclude: Workout.light() }
     })
     while (start.format('D MMMM YYYY') != date.format('D MMMM YYYY')) {
       for (const workout of workouts) {

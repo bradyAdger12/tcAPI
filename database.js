@@ -5,7 +5,7 @@ var sequelize = new Sequelize(process.env.PGDATABASE, process.env.PGUSER, proces
   logging: false,
   dialectOptions: {
     useUTC: true, // --> Add this line. for reading from database
-    ssl: true,
+    ssl: process.env.PGDATABASE !== 'cycling_log_dev',
     native: true
   },
 });

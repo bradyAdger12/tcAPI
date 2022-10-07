@@ -129,7 +129,6 @@ router.get('/stats/test', async (req, res) => {
       if (streams.watts?.data) {
         normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
       }
-      console.log(actor.power_zones)
       zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
     }
     if (normalizedPower && actor.threshold_power) {
