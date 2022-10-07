@@ -3,10 +3,11 @@ var sequelize = new Sequelize(process.env.PGDATABASE, process.env.PGUSER, proces
   host: process.env.PGHOST,
   dialect: 'postgres',
   logging: false,
-  ssl: true,
   dialectOptions: {
     useUTC: true, // --> Add this line. for reading from database
-},
+    ssl: true,
+    native: true
+  },
 });
 
 sequelize
