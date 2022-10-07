@@ -44,6 +44,8 @@ getSummary = async function (actor, startDate, endDate) {
   const yesterdayFatigue = await Workout.getTrainingLoad(actor, moment(endDate).subtract(1, 'days').endOf('day'), 7)
 
   summary['form'] = Math.round(yesterdayFitness - yesterdayFatigue)
+  summary['startDate'] = startDate,
+  summary['endDate'] = endDate
   return summary
 }
 
