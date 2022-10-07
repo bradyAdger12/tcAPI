@@ -44,6 +44,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs))
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use(express.bodyParser({limit: '50mb'}));
 app.use('/users', require('./controllers/users_controller'))
 app.use('/workouts', require('./controllers/workouts_controller'))
 app.use('/strava', require('./controllers/strava_controller'))
