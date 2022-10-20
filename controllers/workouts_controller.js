@@ -480,6 +480,9 @@ router.put('/:id', middleware.authenticateToken, async (req, res) => {
     if (_.has(req.body, 'description')) {
       workout.description = req.body.description
     }
+    if (_.has(req.body, 'activity')) {
+      workout.activity = req.body.activity
+    }
     await workout.save()
     res.json(workout)
   } catch (e) {

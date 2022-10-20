@@ -11,7 +11,7 @@ Workout.init({
   id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
   name: { type: Sequelize.STRING, allowNull: false },
   description: { type: Sequelize.STRING },
-  length: { type: Sequelize.INTEGER, allowNull: false },
+  length: { type: Sequelize.INTEGER },
   activity: { type: Sequelize.STRING },
   duration: { type: Sequelize.INTEGER, allowNull: false },
   source: { type: Sequelize.STRING, allowNull: false },
@@ -54,17 +54,33 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   let bests = null
   let hrtss = null
   let tss = null
+  if (activity.includes('ride')) {
+    activity = 'ride'
+  } else if (activity == 'weighttraining') {
+    activity = 'workout'
+  }
+  const ignoreStressAndZones = (activity === 'workout')
   if (streams) {
     streams = interpolateStreams(streams)
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
   }
-  if (normalizedPower && actor.threshold_power) {
-    tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+  if (actor.running_threshold_pace || (normalizedPower && actor.threshold_power)) {
+    if (activity == 'run') {
+      const minutes = duration / 60;
+      const miles = length / 1609;
+      const pace = (minutes * (1 / miles)) * 60;
+      const numerator = (duration * pace * (pace / actor.running_threshold_pace))
+      const denomenator = actor.running_threshold_pace * 3600
+      const rtss =  (numerator / denomenator) * 100
+      tss = Math.round(rtss)
+    }
+    else {
+      tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+    }
   }
-  if (streams.heartrate?.data) {
-    hrtss = Workout.findHRTSS(actor, streams.heartrate?.data)
-    hrtss = Math.round(hrtss * 100)
+  if (streams.heartrate?.data && activity !== 'run') {
+    hrtss = Workout.findHRTSS(actor, activity, duration, length, streams.heartrate?.data)
   }
 
   //Check if workout already exists in DB
@@ -117,7 +133,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   }
 
   // Create workout entry
-  let newWorkout = await Workout.create({
+  workoutJSON = {
     name: name,
     length: length,
     hr_effort: hrtss,
@@ -134,7 +150,16 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     planned: planned,
     started_at: started_at,
     user_id: actor.id
-  })
+  }
+  if (ignoreStressAndZones) {
+    delete workoutJSON.zones
+    delete workoutJSON.bests
+    delete workoutJSON.streams
+    delete workoutJSON.length
+    delete workoutJSON.hr_effort
+    delete workoutJSON.effort
+  }
+  let newWorkout = await Workout.create(workoutJSON)
   newWorkout = newWorkout.toJSON()
   if (newWorkout) {
     actor.changed('bests', true)
@@ -430,9 +455,10 @@ Workout.getBests = function (actor, heartrateStream, wattsStream) {
   return bests
 }
 
-Workout.findHRTSS = function (actor, heartrates) {
+Workout.findHRTSS = function (actor, activity, duration, length, heartrates) {
   try {
     let hrtss = null
+
     const k = actor.gender == 'male' ? 1.92 : 1.67
     const restinghr = actor.resting_hr
     const maxhr = actor.max_hr
@@ -446,12 +472,12 @@ Workout.findHRTSS = function (actor, heartrates) {
       const lthrr = (thresholdhr - restinghr) / (maxhr - restinghr)
       const trimpthresh = (lthrr * 0.64 * Math.exp(k * lthrr)) * 3600
       hrtss = Math.round((sum / trimpthresh) * 100) / 100
-      return hrtss
+      return Math.round(hrtss * 100)
     } else {
       return null;
     }
   } catch (e) {
-
+    console.log(e)
   }
   return null;
 }

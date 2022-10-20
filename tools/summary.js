@@ -18,8 +18,17 @@ getSummary = async function (actor, startDate, endDate) {
   })
   let summary = {
     'effort': 0,
-    'duration': 0,
-    'distance': 0,
+    'total_duration': 0,
+    'activity_duration': {
+      'run': 0,
+      'cycling': 0,
+      'workout': 0
+    },
+    'total_distance': 0,
+    'activity_distance': {
+      'run': 0,
+      'cycling': 0
+    },
     'fitness': 0,
     'fatigue': 0,
     'form': 0,
@@ -34,8 +43,27 @@ getSummary = async function (actor, startDate, endDate) {
     } else if (workout.hr_effort) {
       summary['effort'] += workout.hr_effort
     }
-    summary['duration'] += workout.duration
-    summary['distance'] += workout.length
+
+    //Add Duration
+    summary['total_duration'] += workout.duration
+    if (workout.activity == 'run') {
+      summary['activity_duration']['run'] += workout.duration
+    }
+    else if (workout.activity == 'ride') {
+      summary['activity_duration']['cycling'] += workout.duration
+    }
+    else if (workout.activity == 'workout') {
+      summary['activity_duration']['workout'] += workout.duration
+    }
+
+    //Add Distance
+    summary['total_distance'] += workout.length
+    if (workout.activity == 'run') {
+      summary['activity_distance']['run'] += workout.length
+    }
+    else if (workout.activity == 'ride') {
+      summary['activity_distance']['cycling'] += workout.length
+    }
     summary['workoutIds'].push(workout.id)
   }
   summary['fitness'] = await Workout.getTrainingLoad(actor, moment(endDate.toISOString()))
@@ -45,7 +73,7 @@ getSummary = async function (actor, startDate, endDate) {
 
   summary['form'] = Math.round(yesterdayFitness - yesterdayFatigue)
   summary['startDate'] = startDate,
-  summary['endDate'] = endDate
+    summary['endDate'] = endDate
   return summary
 }
 

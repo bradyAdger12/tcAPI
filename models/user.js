@@ -22,7 +22,7 @@ User.prototype.getPRs = function (workoutBests) {
   for (const time of timeRanges) {
     if (workoutBests && workoutBests['watts']) {
       if (workoutBests['watts'][time] >= this.bests['watts'][time]) {
-        prs.push({ type: 'watts', time: time, value: workoutBests['watts'][time]})
+        prs.push({ type: 'watts', time: time, value: workoutBests['watts'][time] })
       }
     }
     if (workoutBests && workoutBests['heartrate']) {
@@ -35,30 +35,43 @@ User.prototype.getPRs = function (workoutBests) {
   //Determine if user fitness benchmarks should be increased
   if (workoutBests.hasHeartRate && workoutBests['heartrate']['max'] > this.max_hr) {
     this.max_hr = workoutBests['heartrate']['max']
-    prs.unshift({ type: 'heartrate', value: this.max_hr, name: 'Max HR'})
+    prs.unshift({ type: 'heartrate', value: this.max_hr, name: 'Max HR' })
   }
   if (workoutBests.hasHeartRate && workoutBests['heartrate'] && ((workoutBests['heartrate']['20min'] + workoutBests['heartrate']['10min']) / 2) * .95 > this.threshold_hr) {
     this.threshold_hr = Math.round(((workoutBests['heartrate']['20min'] + workoutBests['heartrate']['10min']) / 2) * .95)
     this.hr_zones = User.getHeartRateZones(this.threshold_hr)
-    prs.unshift({ type: 'heartrate', value: this.threshold_hr, name: 'Threshold HR'})
+    prs.unshift({ type: 'heartrate', value: this.threshold_hr, name: 'Threshold HR' })
   }
   if (workoutBests.hasWatts && workoutBests['watts'] && (workoutBests['watts']['20min'] * .95) > this.threshold_power) {
     this.threshold_power = Math.round(workoutBests['watts']['20min'] * .95)
     this.power_zones = User.getPowerZones(this.threshold_power)
-    prs.unshift({ type: 'watts', value: this.threshold_power, name: 'FTP'})
+    prs.unshift({ type: 'watts', value: this.threshold_power, name: 'FTP' })
   }
   return prs
 }
 
 User.getHeartRateZones = function (thresh_hr) {
   if (thresh_hr) {
-    return [{ title: 'Recovery', low: 0, high: Math.round(thresh_hr * .68) }, { title: 'Endurance', low: Math.round(thresh_hr * .69), high: Math.round(thresh_hr * .83) }, { title: 'Tempo', low: Math.round(thresh_hr * .84), high: Math.round(thresh_hr * .94) }, { title: 'Threshold', low: Math.round(thresh_hr * .95), high: Math.round(thresh_hr * 1.05) }, { title: 'VO2 Max', low: Math.round(thresh_hr * 1.06), high: 'MAX' }]
+    return [
+      { title: 'Recovery', low: 0, high: Math.round(thresh_hr * .68) },
+      { title: 'Endurance', low: Math.round(thresh_hr * .68) + 1, high: Math.round(thresh_hr * .83) },
+      { title: 'Tempo', low: Math.round(thresh_hr * .83) + 1, high: Math.round(thresh_hr * .94) },
+      { title: 'Threshold', low: Math.round(thresh_hr * .94) + 1, high: Math.round(thresh_hr * 1.05) }, 
+      { title: 'VO2 Max', low: Math.round(thresh_hr * 1.05) + 1, high: 'MAX' }
+    ]
   }
   return []
 }
 User.getPowerZones = function (thresh_power) {
   if (thresh_power) {
-    return [{ title: 'Recovery', low: 0, high: Math.round(thresh_power * .54) }, { title: 'Endurance', low: Math.round(thresh_power * .55), high: Math.round(thresh_power * .75) }, { title: 'Tempo', low: Math.round(thresh_power * .76), high: Math.round(thresh_power * .90) }, { title: 'Threshold', low: Math.round(thresh_power * .91), high: Math.round(thresh_power * 1.05) }, { title: 'VO2 Max', low: Math.round(thresh_power * 1.06), high: Math.round(thresh_power * 1.20) }, { title: 'Anaerobic', low: Math.round(thresh_power * 1.20), high: 'MAX' }]
+    return [
+      { title: 'Recovery', low: 0, high: Math.round(thresh_power * .54) }, 
+      { title: 'Endurance', low: Math.round(thresh_power * .54) + 1, high: Math.round(thresh_power * .75) }, 
+      { title: 'Tempo', low: Math.round(thresh_power * .75) + 1, high: Math.round(thresh_power * .90) }, 
+      { title: 'Threshold', low: Math.round(thresh_power * .90) + 1, high: Math.round(thresh_power * 1.05) }, 
+      { title: 'VO2 Max', low: Math.round(thresh_power * 1.05) + 1, high: Math.round(thresh_power * 1.20) }, 
+      { title: 'Anaerobic', low: Math.round(thresh_power * 1.20) + 1, high: 'MAX' }
+    ]
   }
   return []
 }
@@ -104,6 +117,7 @@ User.init({
   resting_hr: Sequelize.INTEGER,
   threshold_hr: Sequelize.INTEGER,
   threshold_power: Sequelize.INTEGER,
+  running_threshold_pace: Sequelize.INTEGER,
   strava_token: Sequelize.STRING,
   garmin_token: Sequelize.STRING,
   strava_enable_auto_sync: { type: Sequelize.BOOLEAN, defaultValue: false },
