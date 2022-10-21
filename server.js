@@ -5,9 +5,11 @@ const express = require('express')
 const app = express()
 var cors = require('cors')
 const swaggerJsDoc = require('swagger-jsdoc')
+const moment = require('moment')
 const swaggerUi = require('swagger-ui-express')
 const schemas = require('./swagger/schemas.js')
 const sequelize = require('./database')
+moment.tz.setDefault("America/Denver");
 const swaggerOptions = {
   swaggerDefinition: {
     openapi: "3.0.1",
