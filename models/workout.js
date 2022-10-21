@@ -60,9 +60,10 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     activity = 'workout'
   }
   const ignoreStressAndZones = (activity === 'workout')
-  if (streams?.length > 0) {
+  if (streams?.watts?.data || streams?.heartrate?.data) {
     streams = interpolateStreams(streams)
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
+    console.log(zones)
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
   }
   if (actor.running_threshold_pace || (normalizedPower && actor.threshold_power)) {
