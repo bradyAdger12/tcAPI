@@ -160,12 +160,10 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   console.log(workoutJSON)
   let newWorkout = await Workout.create(workoutJSON)
   newWorkout = newWorkout.toJSON()
-  if (newWorkout) {
-    if (newWorkout.activity !== 'workout') {
-      actor.changed('bests', true)
-      const prs = actor.getPRs(bests)
-      newWorkout.prs = prs
-    }
+  if (newWorkout && newWorkout.bests && bests) { 
+    actor.changed('bests', true)
+    const prs = actor.getPRs(bests)
+    newWorkout.prs = prs
     await actor.save()
   }
   return newWorkout

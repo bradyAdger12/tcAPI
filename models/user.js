@@ -33,16 +33,16 @@ User.prototype.getPRs = function (workoutBests) {
   }
 
   //Determine if user fitness benchmarks should be increased
-  if (workoutBests.hasHeartRate && workoutBests['heartrate']['max'] > this.max_hr) {
+  if (workoutBests?.hasHeartRate && workoutBests['heartrate']['max'] > this.max_hr) {
     this.max_hr = workoutBests['heartrate']['max']
     prs.unshift({ type: 'heartrate', value: this.max_hr, name: 'Max HR' })
   }
-  if (workoutBests.hasHeartRate && workoutBests['heartrate'] && ((workoutBests['heartrate']['20min'] + workoutBests['heartrate']['10min']) / 2) * .95 > this.threshold_hr) {
+  if (workoutBests?.hasHeartRate && workoutBests['heartrate'] && ((workoutBests['heartrate']['20min'] + workoutBests['heartrate']['10min']) / 2) * .95 > this.threshold_hr) {
     this.threshold_hr = Math.round(((workoutBests['heartrate']['20min'] + workoutBests['heartrate']['10min']) / 2) * .95)
     this.hr_zones = User.getHeartRateZones(this.threshold_hr)
     prs.unshift({ type: 'heartrate', value: this.threshold_hr, name: 'Threshold HR' })
   }
-  if (workoutBests.hasWatts && workoutBests['watts'] && (workoutBests['watts']['20min'] * .95) > this.threshold_power) {
+  if (workoutBests?.hasWatts && workoutBests['watts'] && (workoutBests['watts']['20min'] * .95) > this.threshold_power) {
     this.threshold_power = Math.round(workoutBests['watts']['20min'] * .95)
     this.power_zones = User.getPowerZones(this.threshold_power)
     prs.unshift({ type: 'watts', value: this.threshold_power, name: 'FTP' })
