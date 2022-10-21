@@ -70,7 +70,7 @@ router.get('/stats/test', async (req, res) => {
  *      default:
  *          description: Generic server error
  */
- router.put('/update/planned/:id', middleware.authenticateToken, async (req, res) => {
+router.put('/update/planned/:id', middleware.authenticateToken, async (req, res) => {
   try {
     const name = req.body.name
     const id = req.params.id
@@ -178,10 +178,12 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
     const isPower = req.body.isPower
     const actor = req.actor
     const started_at = req.body.startedAt
-    const length = 0
+    const length = req.body.length ?? 0
+    let duration = 0
+    let streams = {}
     const source = 'planned'
     const is_completed = false
-    const activity = 'ride'
+    const activity = req.body.activity
     const source_id = Math.random().toString(36).substring(0, 14)
     let normalizedPower = null
     if (!name) {
@@ -191,28 +193,29 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
     }
 
     //create planned workout
-
-    let duration = 0
-    const dataType = isPower ? 'watts' : 'heartrate'
-    let streams = {
-      'heartrate': null,
-      'watts': null
-    }
-    streams[dataType] = {}
-    streams[dataType]['data'] = []
-    for (const block of planned) {
-      for (let i = 0; i < block.numSets; i++) {
-        for (const set of block.sets) {
-          const d = moment.duration(set.duration).asSeconds()
-          for (let sec = 0; sec < d; sec++) {
-            streams[dataType]?.data.push(parseInt(set.value.toString()))
+    if (activity == 'ride') {
+      const dataType = isPower ? 'watts' : 'heartrate'
+      streams = {
+        'heartrate': null,
+        'watts': null
+      }
+      streams[dataType] = {}
+      streams[dataType]['data'] = []
+      for (const block of planned) {
+        for (let i = 0; i < block.numSets; i++) {
+          for (const set of block.sets) {
+            const d = moment.duration(set.duration).asSeconds()
+            for (let sec = 0; sec < d; sec++) {
+              streams[dataType]?.data.push(parseInt(set.value.toString()))
+            }
+            duration += d
           }
-          duration += d
         }
       }
+      normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
     }
-    normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
     const plannedWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower, planned, is_completed })
+
     res.json(plannedWorkout)
   } catch (e) {
     res.status(500).json({ message: e.message })
