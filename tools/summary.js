@@ -2,8 +2,8 @@ const Workout = require('../models/workout.js')
 const { Op } = require('sequelize')
 const moment = require('moment')
 getSummary = async function (actor, startDate, endDate) {
-  console.log(startDate.toISOString())
-  console.log(endDate.toISOString())
+  console.log(startDate.tz.guess(), startDate.toISOString())
+  console.log(endDate.tz.guess(), endDate.toISOString())
   let workouts = await Workout.findAll({
     order: [
       ['started_at', 'DESC']],
