@@ -74,7 +74,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
       const denomenator = actor.running_threshold_pace * 3600
       const rtss =  (numerator / denomenator) * 100
       tss = Math.round(rtss)
-    } else if (activity == 'ride') {
+    } else if (activity == 'ride' && normalizedPower) {
       tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
     }
   }
@@ -157,7 +157,6 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     delete workoutJSON.hr_effort
     delete workoutJSON.effort
   }
-  console.log(workoutJSON)
   let newWorkout = await Workout.create(workoutJSON)
   newWorkout = newWorkout.toJSON()
   if (newWorkout && newWorkout.bests && bests) { 
