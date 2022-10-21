@@ -3,8 +3,9 @@ var sequelize = new Sequelize(process.env.PGDATABASE, process.env.PGUSER, proces
   host: process.env.PGHOST,
   dialect: 'postgres',
   logging: false,
+  timezone: '+07:00',
   dialectOptions: {
-    useUTC: true, // --> Add this line. for reading from database
+    useUTC: false, // --> Add this line. for reading from database
     ssl: process.env.PGDATABASE !== 'cycling_log_dev',
     native: true
   },
