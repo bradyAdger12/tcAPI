@@ -50,26 +50,41 @@ User.prototype.getPRs = function (workoutBests) {
   return prs
 }
 
-User.getHeartRateZones = function (thresh_hr) {
+User.getHeartRateZones = function (max_hr, thresh_hr) {
+  let cycling_hr_zones = []
+  let running_hr_zones = []
   if (thresh_hr) {
-    return [
+    cycling_hr_zones = [
       { title: 'Recovery', low: 0, high: Math.round(thresh_hr * .68) },
       { title: 'Endurance', low: Math.round(thresh_hr * .68) + 1, high: Math.round(thresh_hr * .83) },
       { title: 'Tempo', low: Math.round(thresh_hr * .83) + 1, high: Math.round(thresh_hr * .94) },
-      { title: 'Threshold', low: Math.round(thresh_hr * .94) + 1, high: Math.round(thresh_hr * 1.05) }, 
+      { title: 'Threshold', low: Math.round(thresh_hr * .94) + 1, high: Math.round(thresh_hr * 1.05) },
       { title: 'VO2 Max', low: Math.round(thresh_hr * 1.05) + 1, high: 'MAX' }
     ]
   }
-  return []
+  if (max_hr) {
+    running_hr_zones = [
+      { title: 'Recovery', low: 0, high: Math.round(max_hr * .72) },
+      { title: 'Endurance', low: Math.round(max_hr * .72) + 1, high: Math.round(max_hr * .80) },
+      { title: 'Tempo', low: Math.round(max_hr * .80) + 1, high: Math.round(max_hr * .87) },
+      { title: 'Threshold', low: Math.round(max_hr * .87) + 1, high: Math.round(max_hr * .93) },
+      { title: 'VO2 Max', low: Math.round(max_hr * .93) + 1, high: max_hr }
+    ]
+  }
+
+  return {
+    ride: cycling_hr_zones,
+    run: running_hr_zones
+  }
 }
 User.getPowerZones = function (thresh_power) {
   if (thresh_power) {
     return [
-      { title: 'Recovery', low: 0, high: Math.round(thresh_power * .54) }, 
-      { title: 'Endurance', low: Math.round(thresh_power * .54) + 1, high: Math.round(thresh_power * .75) }, 
-      { title: 'Tempo', low: Math.round(thresh_power * .75) + 1, high: Math.round(thresh_power * .90) }, 
-      { title: 'Threshold', low: Math.round(thresh_power * .90) + 1, high: Math.round(thresh_power * 1.05) }, 
-      { title: 'VO2 Max', low: Math.round(thresh_power * 1.05) + 1, high: Math.round(thresh_power * 1.20) }, 
+      { title: 'Recovery', low: 0, high: Math.round(thresh_power * .54) },
+      { title: 'Endurance', low: Math.round(thresh_power * .54) + 1, high: Math.round(thresh_power * .75) },
+      { title: 'Tempo', low: Math.round(thresh_power * .75) + 1, high: Math.round(thresh_power * .90) },
+      { title: 'Threshold', low: Math.round(thresh_power * .90) + 1, high: Math.round(thresh_power * 1.05) },
+      { title: 'VO2 Max', low: Math.round(thresh_power * 1.05) + 1, high: Math.round(thresh_power * 1.20) },
       { title: 'Anaerobic', low: Math.round(thresh_power * 1.20) + 1, high: 'MAX' }
     ]
   }

@@ -2,8 +2,6 @@ const Workout = require('../models/workout.js')
 const { Op } = require('sequelize')
 const moment = require('moment')
 getSummary = async function (actor, startDate, endDate) {
-  console.log(moment.utc(startDate.toISOString()).toString())
-  console.log(moment.utc(endDate.toISOString()).toString())
   let workouts = await Workout.findAll({
     order: [
       ['started_at', 'DESC']],
@@ -37,16 +35,18 @@ getSummary = async function (actor, startDate, endDate) {
     'workoutIds': []
   }
   for (const workout of workouts) {
-    if (workout.planned && !workout.is_completed && moment().endOf('day').isAfter(moment(workout.started_at).endOf('day'))) {
-      continue
-    }
+
+    // Skip planned workouts that have not been completed
+    // if (workout.planned && !workout.is_completed && moment().endOf('day').isAfter(moment(workout.started_at).endOf('day'))) {
+    //   continue
+    // }
     if (workout.effort) {
       summary['effort'] += workout.effort
     } else if (workout.hr_effort) {
       summary['effort'] += workout.hr_effort
     }
 
-    //Add Duration
+    // Add Duration
     summary['total_duration'] += workout.duration
     if (workout.activity == 'run') {
       summary['activity_duration']['run'] += workout.duration

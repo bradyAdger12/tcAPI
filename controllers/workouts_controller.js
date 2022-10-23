@@ -78,6 +78,7 @@ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res)
     const planned = req.body.planned
     const isPower = req.body.isPower
     const actor = req.actor
+    const activity = req.body.activity
     let hrtss = null
     let tss = null
     let normalizedPower = null
@@ -124,7 +125,6 @@ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res)
         }
       }
     }
-
     if (streams) {
       if (streams.watts?.data) {
         normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
@@ -135,8 +135,7 @@ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res)
       tss = Math.round(((totalDuration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
     }
     if (streams.heartrate?.data) {
-      hrtss = Workout.findHRTSS(actor, streams.heartrate?.data)
-      hrtss = Math.round(hrtss * 100)
+      hrtss = Workout.findHRTSS(actor, activity ,streams.heartrate?.data)
     }
     plannedWorkout.name = name
     plannedWorkout.description = description
@@ -144,6 +143,7 @@ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res)
     plannedWorkout.hr_effort = hrtss
     plannedWorkout.streams = streams
     plannedWorkout.planned = planned
+    plannedWorkout.activity = activity
     plannedWorkout.duration = totalDuration
     plannedWorkout.zones = zones
     await plannedWorkout.save()
@@ -193,25 +193,24 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
     }
 
     //create planned workout
-    if (activity == 'ride') {
-      const dataType = isPower ? 'watts' : 'heartrate'
-      streams = {
-        'heartrate': null,
-        'watts': null
-      }
-      streams[dataType] = {}
-      streams[dataType]['data'] = []
-      for (const block of planned) {
-        for (let i = 0; i < block.numSets; i++) {
-          for (const set of block.sets) {
-            const d = moment.duration(set.duration).asSeconds()
-            for (let sec = 0; sec < d; sec++) {
-              streams[dataType]?.data.push(parseInt(set.value.toString()))
-            }
-            duration += d
+    const dataType = isPower ? 'watts' : 'heartrate'
+    streams = {
+      'heartrate': null,
+      'watts': null
+    }
+    streams[dataType] = {}
+    streams[dataType]['data'] = []
+    for (const block of planned) {
+      for (let i = 0; i < block.numSets; i++) {
+        for (const set of block.sets) {
+          const d = moment.duration(set.duration).asSeconds()
+          for (let sec = 0; sec < d; sec++) {
+            streams[dataType]?.data.push(parseInt(set.value.toString()))
           }
+          duration += d
         }
       }
+
       normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
     }
     const plannedWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower, planned, is_completed })

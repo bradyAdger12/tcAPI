@@ -170,7 +170,7 @@ router.put('/update/me', middleware.authenticateToken, async (req, res) => {
       }
       if (_.has(req.body, 'threshold_hr')) {
         user.threshold_hr = req.body.threshold_hr && req.body.threshold_hr != '' ? req.body.threshold_hr : null
-        user.hr_zones = User.getHeartRateZones(user.threshold_hr)
+        user.hr_zones = User.getHeartRateZones(user.max_hr, user.threshold_hr)
       }
       if (_.has(req.body, 'threshold_power')) {
         user.threshold_power = req.body.threshold_power && req.body.threshold_power != '' ? req.body.threshold_power : null
@@ -324,7 +324,7 @@ router.post('/register', async (req, res) => {
     }
     req.body.password = password
     if (req.body.threshold_hr) {
-      req.body.hr_zones = User.getHeartRateZones(req.body.threshold_hr)
+      req.body.hr_zones = User.getHeartRateZones(req.body.max_hr, req.body.threshold_hr)
     }
     if (req.body.threshold_power) {
       req.body.power_zones = User.getPowerZones(req.body.threshold_power)

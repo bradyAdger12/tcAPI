@@ -62,25 +62,15 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   const ignoreStressAndZones = (activity === 'workout')
   if (streams?.watts?.data || streams?.heartrate?.data) {
     streams = interpolateStreams(streams)
-    zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, actor.hr_zones, actor.power_zones)
-    console.log(zones)
+    const hr_zones = actor.hr_zones[activity === 'ride' ? 'cycling' : 'running']
+    zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, hr_zones, actor.power_zones)
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
   }
-  if (actor.running_threshold_pace || (normalizedPower && actor.threshold_power)) {
-    if (activity == 'run' && duration > 0 && length > 0) {
-      const minutes = duration / 60;
-      const miles = length / 1609;
-      const pace = (minutes * (1 / miles)) * 60;
-      const numerator = (duration * pace * (pace / actor.running_threshold_pace))
-      const denomenator = actor.running_threshold_pace * 3600
-      const rtss =  (numerator / denomenator) * 100
-      tss = Math.round(rtss)
-    } else if (activity == 'ride' && normalizedPower) {
-      tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
-    }
+  if (normalizedPower && actor.threshold_power) {
+    tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
   }
-  if (streams.heartrate?.data && activity !== 'run') {
-    hrtss = Workout.findHRTSS(actor, activity, duration, length, streams.heartrate?.data)
+  if (streams.heartrate?.data) {
+    hrtss = Workout.findHRTSS(actor, activity, streams.heartrate?.data)
   }
   //Check if workout already exists in DB
   const workout = await Workout.findOne({
@@ -160,7 +150,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   }
   let newWorkout = await Workout.create(workoutJSON)
   newWorkout = newWorkout.toJSON()
-  if (newWorkout && newWorkout.bests && bests) { 
+  if (newWorkout && newWorkout.bests && bests) {
     actor.changed('bests', true)
     const prs = actor.getPRs(bests)
     newWorkout.prs = prs
@@ -454,7 +444,7 @@ Workout.getBests = function (actor, heartrateStream, wattsStream) {
   return bests
 }
 
-Workout.findHRTSS = function (actor, activity, duration, length, heartrates) {
+Workout.findHRTSS = function (actor, activity, heartrates) {
   try {
     let hrtss = null
 
@@ -471,6 +461,9 @@ Workout.findHRTSS = function (actor, activity, duration, length, heartrates) {
       const lthrr = (thresholdhr - restinghr) / (maxhr - restinghr)
       const trimpthresh = (lthrr * 0.64 * Math.exp(k * lthrr)) * 3600
       hrtss = Math.round((sum / trimpthresh) * 100) / 100
+      if (activity === 'run') {
+        return Math.round(hrtss * 100 * 1.65)
+      }
       return Math.round(hrtss * 100)
     } else {
       return null;
