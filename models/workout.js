@@ -209,9 +209,9 @@ Workout.getTrainingLoad = async function (actor, date, daysToInclude = 42) {
         if (moment(workout.started_at).format('D MMMM YYYY') == start.format('D MMMM YYYY')) {
 
           //Dont add incomplete workouts to training load numbers
-          if (workout.planned && !workout.is_completed && moment().endOf('day').isAfter(moment(workout.started_at).endOf('day'))) {
-            continue
-          }
+          // if (workout.planned && !workout.is_completed && moment().endOf('day').isAfter(moment(workout.started_at).endOf('day'))) {
+          //   continue
+          // }
           if (workout.effort) {
             todaysEffort += workout.effort
           } else if (workout.hr_effort) {
