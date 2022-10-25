@@ -79,7 +79,7 @@ User.getHeartRateZones = function (max_hr, thresh_hr) {
 }
 User.getPowerZones = function (thresh_power) {
   if (thresh_power) {
-    return [
+    const power_zones = [
       { title: 'Recovery', low: 0, high: Math.round(thresh_power * .54) },
       { title: 'Endurance', low: Math.round(thresh_power * .54) + 1, high: Math.round(thresh_power * .75) },
       { title: 'Tempo', low: Math.round(thresh_power * .75) + 1, high: Math.round(thresh_power * .90) },
@@ -87,6 +87,7 @@ User.getPowerZones = function (thresh_power) {
       { title: 'VO2 Max', low: Math.round(thresh_power * 1.05) + 1, high: Math.round(thresh_power * 1.20) },
       { title: 'Anaerobic', low: Math.round(thresh_power * 1.20) + 1, high: 'MAX' }
     ]
+    return { ride: power_zones }
   }
   return []
 }
