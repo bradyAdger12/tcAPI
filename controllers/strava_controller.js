@@ -223,6 +223,7 @@ router.get('/athlete', middleware.authenticateToken, async (req, res) => {
           verify_token: 'STRAVA'
         })
       } catch (e) {
+        console.log(e)
       }
     }
     res.json(data)
