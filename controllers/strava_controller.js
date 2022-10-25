@@ -4,6 +4,7 @@ const router = express.Router()
 const middleware = require('../middleware')
 const axios = require('axios')
 const interpolateArray = require('../tools/interpolation.js')
+const User = require('../models/user')
 
 
 
@@ -56,6 +57,140 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
   }
 })
 
+/**
+ * @swagger
+ * 
+ * /strava/webhook:
+ *  post:
+ *    tags: [Strava]
+ *    summary: Create or Update imported strava activities
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+
+router.post('/webhook', async (req, res) => {
+  res.status(200).send('EVENT_RECEIVED');
+  if (req.body) {
+    console.log(req.body)
+    try {
+      const type = req.body.aspect_type
+      const activity_id = req.body.object_id?.toString()
+      const updates = req.body.updates
+      const owner_id = req.body.owner_id
+      if (type === 'update') {
+        const workout = await Workout.findOne({
+          where: {
+            source_id: activity_id
+          },
+          attributes: { exclude: Workout.light() }
+        })
+        if (workout) {
+          for (const key of Object.keys(updates)) {
+            if (key === 'title') {
+              workout.name = updates[key]
+            }
+          }
+          await workout.save()
+        }
+      } else if (type === 'create') {
+        console.log(type)
+        const user = await User.findOne({
+          where: {
+            strava_owner_id: owner_id
+          }
+        })
+        if (user) {
+          const actor = user
+          try {
+            const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
+            let name = null
+            let duration = null
+            let length = null
+            let started_at = null
+            let source_id = null
+            let source = null
+            let activity = null
+            let streams = null
+            let normalizedPower = null
+            let description = null
+            let streamResponse = null
+            const activityResponse = await axios.get(`https://www.strava.com/api/v3/activities/${activity_id}`, headers)
+            try {
+              streamResponse = await axios.get(`https://www.strava.com/api/v3/activities/${activity_id}/streams?key_by_type=true&keys=heartrate,watts,distance&series_type=time`, headers)
+            } catch (e) { }
+            const data = activityResponse.data
+
+            //Assign values from response
+            name = data.name
+            description = data.description
+            source = 'strava'
+            duration = Math.round(data.moving_time)
+            source_id = data.id.toString()
+            length = Math.round(data.distance)
+            started_at = data.start_date
+            streams = streamResponse?.data 
+            normalizedPower = data.weighted_average_watts
+            activity = data.type?.toLowerCase()
+
+            await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower })
+          } catch (e) {
+            console.log(e)
+          }
+
+        }
+      }
+    } catch (e) {
+      console.log(e)
+    }
+  }
+})
+
+/**
+ * @swagger
+ * 
+ * /strava/webhook:
+ *  get:
+ *    tags: [Strava]
+ *    summary: Get something
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+
+router.get('/webhook', async (req, res) => {
+  // Your verify token. Should be a random string.
+  const VERIFY_TOKEN = "STRAVA";
+  // Parses the query params
+  let mode = req.query['hub.mode'];
+  let token = req.query['hub.verify_token'];
+  let challenge = req.query['hub.challenge'];
+  // Checks if a token and mode is in the query string of the request
+  if (mode && token) {
+    // Verifies that the mode and token sent are valid
+    if (mode === 'subscribe' && token === VERIFY_TOKEN) {
+      // Responds with the challenge token from the request
+      console.log('WEBHOOK_VERIFIED');
+      res.json({ "hub.challenge": challenge });
+    } else {
+      // Responds with '403 Forbidden' if verify tokens do not match
+      res.sendStatus(403);
+    }
+  }
+})
+
 
 /**
  * @swagger
@@ -81,6 +216,18 @@ router.get('/athlete', middleware.authenticateToken, async (req, res) => {
     const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
     const athleteResponse = await axios.get(`https://www.strava.com/api/v3/athlete`, headers)
     const data = athleteResponse.data
+    console.log(data)
+    if (data) {
+      try {
+        await axios.post(`https://www.strava.com/api/v3/push_subscriptions`, {
+          client_id: process.env.STRAVA_CLIENT_ID,
+          client_secret: process.env.STRAVA_CLIENT_SECRET,
+          callback_url: process.env.WEBHOOK_URL + `?id=${actor.id}`,
+          verify_token: 'STRAVA'
+        })
+      } catch (e) {
+      }
+    }
     res.json(data)
   } catch (e) {
     console.log(e)

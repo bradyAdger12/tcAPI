@@ -137,7 +137,8 @@ User.init({
   strava_token: Sequelize.STRING,
   garmin_token: Sequelize.STRING,
   strava_enable_auto_sync: { type: Sequelize.BOOLEAN, defaultValue: false },
-  garmin_enable_auto_sync: { type: Sequelize.BOOLEAN, defaultValue: false }
+  garmin_enable_auto_sync: { type: Sequelize.BOOLEAN, defaultValue: false },
+  strava_owner_id: Sequelize.STRING
 }, {
   // Other model options go here
   sequelize, // We need to pass the connection instance

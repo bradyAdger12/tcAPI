@@ -70,7 +70,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   if (normalizedPower && actor.threshold_power) {
     tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
   }
-  if (streams.heartrate?.data) {
+  if (streams?.heartrate?.data) {
     hrtss = Workout.findHRTSS(actor, activity, streams.heartrate?.data)
   }
   //Check if workout already exists in DB

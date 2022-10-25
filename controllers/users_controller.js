@@ -179,6 +179,9 @@ router.put('/update/me', middleware.authenticateToken, async (req, res) => {
       if (_.has(req.body, 'strava_token')) {
         user.strava_token = req.body.strava_token
       }
+      if (_.has(req.body, 'strava_owner_id')) {
+        user.strava_owner_id = req.body.strava_owner_id
+      }
       if (_.has(req.body, 'garmin_token')) {
         user.garmin_token = req.body.garmin_token
       }
