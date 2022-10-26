@@ -214,18 +214,6 @@ router.get('/athlete', middleware.authenticateToken, async (req, res) => {
     const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
     const athleteResponse = await axios.get(`https://www.strava.com/api/v3/athlete`, headers)
     const data = athleteResponse.data
-    if (data) {
-      try {
-        await axios.post(`https://www.strava.com/api/v3/push_subscriptions`, {
-          client_id: process.env.STRAVA_CLIENT_ID,
-          client_secret: process.env.STRAVA_CLIENT_SECRET,
-          callback_url: process.env.WEBHOOK_URL,
-          verify_token: 'STRAVA'
-        })
-      } catch (e) {
-        console.log(e)
-      }
-    }
     res.json(data)
   } catch (e) {
     console.log(e)
