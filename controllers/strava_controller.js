@@ -78,6 +78,7 @@ router.get('/activities', middleware.authenticateToken, async (req, res) => {
 router.post('/webhook', async (req, res) => {
   res.status(200).send('EVENT_RECEIVED');
   if (req.body) {
+    console.log(req.body)
     try {
       const type = req.body.aspect_type
       const activity_id = req.body.object_id?.toString()
