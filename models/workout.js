@@ -107,7 +107,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     },
     attributes: { exclude: Workout.light() }
   })
-  if (plannedWorkout && is_completed) {
+  if (plannedWorkout && is_completed && plannedWorkout.activity === activity) {
     plannedWorkout.name = name
     plannedWorkout.length = length
     plannedWorkout.hr_effort = hrtss
