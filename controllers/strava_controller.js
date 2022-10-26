@@ -103,8 +103,11 @@ router.post('/webhook', async (req, res) => {
           })
           if (workout) {
             for (const key of Object.keys(updates)) {
+              console.log(key)
               if (key === 'title') {
                 workout.name = updates[key]
+              } else if (key === 'description') {
+                workout.description = updates[key]
               }
             }
             await workout.save()
