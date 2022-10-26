@@ -54,10 +54,14 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   let bests = null
   let hrtss = null
   let tss = null
+  const acceptableActivities = ['ride', 'workout' , 'run', 'swim']
   if (activity.includes('ride')) {
     activity = 'ride'
   } else if (activity == 'weighttraining') {
     activity = 'workout'
+  }
+  if (!acceptableActivities.includes(activity)) {
+    throw Error(`Activity '${activity}' is not supported by this app`)
   }
   const ignoreStressAndZones = (activity === 'workout')
   if (streams?.watts?.data || streams?.heartrate?.data) {
@@ -65,7 +69,6 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     const hr_zones = actor.hr_zones[activity]
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, hr_zones, actor.power_zones)
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
-    console.log(zones)
   }
   if (normalizedPower && actor.threshold_power) {
     tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
