@@ -67,7 +67,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   if (streams?.watts?.data || streams?.heartrate?.data) {
     streams = interpolateStreams(streams)
     const hr_zones = actor.hr_zones[activity]
-    zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, hr_zones, actor.power_zones)
+    zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, hr_zones, actor.power_zones['ride'])
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
   }
   if (normalizedPower && actor.threshold_power) {
@@ -90,7 +90,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
 
   //Check if there is a planned workout on same day
   const ended_at = moment(started_at).endOf('day')
-  started_at = moment(started_at)
+  started_at = moment(started_at).startOf('day')
   const plannedWorkout = await Workout.findOne({
     where: {
       planned: {
