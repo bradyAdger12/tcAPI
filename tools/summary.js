@@ -21,13 +21,13 @@ getSummary = async function (actor, startDate, endDate) {
     'total_duration': 0,
     'activity_duration': {
       'run': 0,
-      'cycling': 0,
+      'ride': 0,
       'workout': 0
     },
     'total_distance': 0,
     'activity_distance': {
       'run': 0,
-      'cycling': 0
+      'ride': 0
     },
     'fitness': 0,
     'fatigue': 0,
@@ -52,7 +52,7 @@ getSummary = async function (actor, startDate, endDate) {
       summary['activity_duration']['run'] += workout.duration
     }
     else if (workout.activity == 'ride') {
-      summary['activity_duration']['cycling'] += workout.duration
+      summary['activity_duration']['ride'] += workout.duration
     }
     else if (workout.activity == 'workout') {
       summary['activity_duration']['workout'] += workout.duration
@@ -64,7 +64,7 @@ getSummary = async function (actor, startDate, endDate) {
       summary['activity_distance']['run'] += workout.length
     }
     else if (workout.activity == 'ride') {
-      summary['activity_distance']['cycling'] += workout.length
+      summary['activity_distance']['ride'] += workout.length
     }
     summary['workoutIds'].push(workout.id)
   }

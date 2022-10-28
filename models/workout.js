@@ -466,7 +466,7 @@ Workout.findHRTSS = function (actor, activity, heartrates) {
       const trimpthresh = (lthrr * 0.64 * Math.exp(k * lthrr)) * 3600
       hrtss = Math.round((sum / trimpthresh) * 100) / 100
       if (activity === 'run') {
-        return Math.round(hrtss * 100 * 1.65)
+        return Math.round(hrtss * 100 * 1.50)
       }
       return Math.round(hrtss * 100)
     } else {

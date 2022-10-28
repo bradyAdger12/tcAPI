@@ -191,7 +191,6 @@ router.put('/update/me', middleware.authenticateToken, async (req, res) => {
       if (_.has(req.body, 'garmin_enable_auto_sync')) {
         user.garmin_enable_auto_sync = req.body.garmin_enable_auto_sync
       }
-      console.log(user.strava_enable_auto_sync )
       const updatedUser = await user.save()
       return res.json(User.formatUser(updatedUser))
     }
