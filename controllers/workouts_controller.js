@@ -78,6 +78,7 @@ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res)
     const planned = req.body.planned
     const isPower = req.body.isPower
     const actor = req.actor
+    const length = req.body.length ?? 0
     const activity = req.body.activity
     let hrtss = null
     let tss = null
@@ -142,6 +143,7 @@ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res)
     plannedWorkout.effort = tss
     plannedWorkout.hr_effort = hrtss
     plannedWorkout.streams = streams
+    plannedWorkout.length = length
     plannedWorkout.planned = planned
     plannedWorkout.activity = activity
     plannedWorkout.duration = totalDuration
