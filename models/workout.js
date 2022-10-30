@@ -76,6 +76,9 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   if (streams?.heartrate?.data) {
     hrtss = Workout.findHRTSS(actor, activity, streams.heartrate?.data)
   }
+  if (_.isNumber(hrtss)) {
+    hrtss = null
+  }
   //Check if workout already exists in DB
   const workout = await Workout.findOne({
     where: {
@@ -96,6 +99,9 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
       planned: {
         [Op.ne]: null
       },
+      activity: {
+        [Op.eq]: activity
+      },
       is_completed: false,
       user_id: actor.id,
       "started_at": {
@@ -107,7 +113,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     },
     attributes: { exclude: Workout.light() }
   })
-  if (plannedWorkout && is_completed && plannedWorkout.activity === activity) {
+  if (plannedWorkout && is_completed) {
     plannedWorkout.name = name
     plannedWorkout.length = length
     plannedWorkout.hr_effort = hrtss
