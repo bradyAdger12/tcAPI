@@ -181,6 +181,8 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
     const actor = req.actor
     const started_at = req.body.startedAt
     const length = req.body.length ?? 0
+    const planned_hr_effort = req.body.hr_effort
+    const planned_effort = req.body.effort
     let duration = 0
     let streams = {}
     const source = 'planned'
@@ -215,7 +217,7 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
 
       normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
     }
-    const plannedWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower, planned, is_completed })
+    const plannedWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower, planned, is_completed, planned_hr_effort, planned_effort })
 
     res.json(plannedWorkout)
   } catch (e) {
@@ -486,6 +488,12 @@ router.put('/:id', middleware.authenticateToken, async (req, res) => {
     }
     if (_.has(req.body, 'activity')) {
       workout.activity = req.body.activity
+    }
+    if (_.has(req.body, 'planned_hr_effort')) {
+      workout.hr_effort = req.body.planned_hr_effort
+    }
+    if (_.has(req.body, 'planned_effort')) {
+      workout.effort = req.body.planned_effort
     }
     await workout.save()
     res.json(workout)

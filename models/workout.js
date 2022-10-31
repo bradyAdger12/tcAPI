@@ -49,7 +49,7 @@ interpolateStreams = function (streams) {
 
 
 
-Workout.createWorkout = async ({ actor, name, description, duration, length, source, source_id, started_at, normalizedPower, streams, activity, planned, is_completed = true }) => {
+Workout.createWorkout = async ({ actor, name, description, duration, length, source, source_id, started_at, normalizedPower, streams, activity, planned, is_completed = true, planned_hr_effort, planned_effort }) => {
   let zones = null
   let bests = null
   let hrtss = null
@@ -78,6 +78,11 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   }
   if (_.isNumber(hrtss)) {
     hrtss = null
+  }
+  if (planned_hr_effort) {
+    hrtss = planned_hr_effort
+  } else if (planned_effort) {
+    tss = planned_effort
   }
   //Check if workout already exists in DB
   const workout = await Workout.findOne({
@@ -217,11 +222,6 @@ Workout.getTrainingLoad = async function (actor, date, daysToInclude = 42) {
     while (start.format('D MMMM YYYY') != date.format('D MMMM YYYY')) {
       for (const workout of workouts) {
         if (moment(workout.started_at).format('D MMMM YYYY') == start.format('D MMMM YYYY')) {
-
-          //Dont add incomplete workouts to training load numbers
-          // if (workout.planned && !workout.is_completed && moment().endOf('day').isAfter(moment(workout.started_at).endOf('day'))) {
-          //   continue
-          // }
           if (workout.effort) {
             todaysEffort += workout.effort
           } else if (workout.hr_effort) {
