@@ -131,7 +131,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     plannedWorkout.streams = streams
     plannedWorkout.duration = duration
     plannedWorkout.is_completed = true
-    plannedWorkout.started_at = started_at.toISOString()
+    plannedWorkout.started_at = started_at
     await plannedWorkout.save()
     return plannedWorkout
   }
