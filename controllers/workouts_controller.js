@@ -8,6 +8,7 @@ const _ = require('lodash')
 const { Op } = require('sequelize')
 const moment = require('moment')
 const getSummary = require('../tools/summary.js')
+const cache = require('../cache.js')
 
 // Workouts routes
 
@@ -255,7 +256,7 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
  *      default:
  *          description: Generic server error
  */
-router.get('/weekly_summary', middleware.authenticateToken, async (req, res) => {
+router.get('/weekly_summary', [middleware.authenticateToken, middleware.cache], async (req, res) => {
   try {
     const startDate = req.query.startDate
     const endDate = req.query.endDate
@@ -263,7 +264,8 @@ router.get('/weekly_summary', middleware.authenticateToken, async (req, res) => 
       throw Error('startDate and endDate are required')
     }
     summary = await getSummary(req.actor, moment(startDate), moment(endDate).endOf('day'))
-    res.json({ summary })
+    await cache.set(req._parsedUrl.path, JSON.stringify(summary), 'EX', 60)
+    return res.json({ summary })
   } catch (e) {
     res.status(500).json({ message: e.message })
   }

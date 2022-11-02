@@ -3,19 +3,16 @@ const User = require('./models/user.js')
 const cache = require('./cache')
 const middleware = {
   cache: async (req, res, next) => {
-
     //Cache calendar data
-    if (req.query.calendar_cache) {
+    const path = req._parsedUrl.path
+    if (path) {
       try {
-        let response = await cache.get(`calendar-${req.query.startsAt}${req.query.endsAt}`)
-        if (response) {
-          req.body.calendar_cached = true
-          const dates = JSON.parse(response)
-          return res.json(dates)
-        } else {
-          req.body.calendar_cached = false
+        let response = await cache.get(path)
+        const data = JSON.parse(response)
+        if (data) {
+          return res.json({ summary: data })
         }
-      } catch (e) { 
+      } catch (e) {
         console.log(e)
       }
     }

@@ -3,6 +3,7 @@ const { Sequelize, Model, Op } = require('sequelize');
 const _ = require('lodash')
 const moment = require('moment')
 const User = require('./user.js')
+const cache = require('../cache')
 
 class Workout extends Model {
 }
@@ -32,6 +33,31 @@ Workout.init({
   sequelize, // We need to pass the connection instance
   modelName: 'workouts' // We need to choose the model name
 });
+ 
+Workout.afterCreate(async (workout, options) => {
+  clearSummaryCache()
+});
+
+Workout.afterUpdate(async (workout, options) => {
+  clearSummaryCache()
+});
+
+Workout.afterDestroy(async (workout, options) => {
+  clearSummaryCache()
+});
+
+
+clearSummaryCache = async function () {
+
+  try {
+    const keys = await cache.keys('*weekly*')
+    for (const key of keys) {
+      await cache.del(key)
+    }
+  } catch (e) {
+    console.log(e)
+  }
+}
 
 interpolateStreams = function (streams) {
   if (streams.time) {
