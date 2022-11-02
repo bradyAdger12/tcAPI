@@ -102,9 +102,6 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   if (streams?.heartrate?.data) {
     hrtss = Workout.findHRTSS(actor, activity, streams.heartrate?.data)
   }
-  if (_.isNumber(hrtss)) {
-    hrtss = null
-  }
   if (planned_hr_effort) {
     hrtss = planned_hr_effort
   } else if (planned_effort) {
