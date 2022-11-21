@@ -9,6 +9,7 @@ const { Op } = require('sequelize')
 const moment = require('moment')
 const getSummary = require('../tools/summary.js')
 const cache = require('../cache.js')
+const SavedWorkout = require('../models/savedworkout')
 
 // Workouts routes
 

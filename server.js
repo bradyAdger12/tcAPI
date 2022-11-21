@@ -49,6 +49,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }))
 app.use('/users', require('./controllers/users_controller'))
 app.use('/workouts', require('./controllers/workouts_controller'))
 app.use('/strava', require('./controllers/strava_controller'))
+app.use('/saved_workouts', require('./controllers/saved_workouts_controller'))
 
 app.get('/', (req, res) => {
   res.send('API is healthy')

@@ -5,5 +5,18 @@
     "database": "cycling_log_dev",
     "host": "192.168.1.5",
     "dialect": "postgres"
+  },
+  "production": {
+    "username": "tc_postgres_i6ex_user",
+    "password": "x62xHoom0SFoQJT0HLAbrQCmHp4pUJNB",
+    "database": "tc_postgres_i6ex",
+    "host": "dpg-cd066rqrrk0e0mqnbl40-a.oregon-postgres.render.com",
+    "dialect": "postgres",
+    "ssl":true,
+    "dialectOptions":{
+        "ssl":{
+          "require":true
+        }
+    }
   }
 }
