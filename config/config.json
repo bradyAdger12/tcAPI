@@ -2,7 +2,7 @@
   "development": {
     "username": "postgres",
     "password": "postgres",
-    "database": "tc_dev",
+    "database": "cycling_log_dev",
     "host": "192.168.1.5",
     "dialect": "postgres"
   }
