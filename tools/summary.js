@@ -2,6 +2,7 @@ const Workout = require('../models/workout.js')
 const { Op } = require('sequelize')
 const moment = require('moment')
 getSummary = async function (actor, startDate, endDate) {
+  const validActivities = ['run', 'bike']
   let workouts = await Workout.findAll({
     order: [
       ['started_at', 'DESC']],
@@ -14,7 +15,7 @@ getSummary = async function (actor, startDate, endDate) {
         }
       }
     },
-    attributes: { exclude: Workout.light() }
+    attributes: { exclude: Workout.light().filter((item) => item !== 'zones') }
   })
   let summary = {
     'effort': 0,
@@ -32,9 +33,28 @@ getSummary = async function (actor, startDate, endDate) {
     'fitness': 0,
     'fatigue': 0,
     'form': 0,
+    'zoneDistribution': {
+      'Recovery': 0,
+      'Endurance': 0,
+      'Tempo': 0,
+      'Theshold': 0,
+      'VO2 Max': 0,
+      'Anaerobic': 0
+    },
     'workoutIds': []
   }
   for (const workout of workouts) {
+    if (workout.zones && validActivities.includes(workout.activity)) {
+      for (const key of Object.keys(workout.zones)) {
+        if (key !== 'hasHeartRate' && key !== 'hasWatts') {
+          const value = workout.zones[key]
+          const preferredMetric = value['watt-seconds'] ? value['watt-seconds'] : value['hr-seconds']
+          if (preferredMetric) {
+            summary['zoneDistribution'][key] += preferredMetric
+          }
+        }
+      }
+    }
 
     // Skip planned workouts that have not been completed
     // if (workout.planned && !workout.is_completed && moment().endOf('day').isAfter(moment(workout.started_at).endOf('day'))) {
