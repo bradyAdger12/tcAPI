@@ -225,6 +225,7 @@ router.get('/athlete', middleware.authenticateToken, async (req, res) => {
     const headers = { headers: { 'Authorization': 'Bearer ' + actor.strava_token } }
     const athleteResponse = await axios.get(`https://www.strava.com/api/v3/athlete`, headers)
     const data = athleteResponse.data
+    res.json(data)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }

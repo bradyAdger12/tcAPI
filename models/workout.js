@@ -96,8 +96,16 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, hr_zones, actor.power_zones['ride'])
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
   }
-  if (normalizedPower && actor.threshold_power) {
-    tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+  if ((normalizedPower && actor.threshold_power) || actor.running_threshold_pace) {
+    if (activity === 'run') {
+      const ngp = duration / (length * 0.000621371)
+      const intensityFactor = actor.running_threshold_pace / ngp
+      const numerator = (duration * actor.running_threshold_pace * intensityFactor)
+      const denominator = (ngp * 3600)
+      tss = Math.round((numerator / denominator) * 100)
+    } else {
+      tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+    }
   }
   if (streams?.heartrate?.data) {
     hrtss = Workout.findHRTSS(actor, activity, streams.heartrate?.data)
