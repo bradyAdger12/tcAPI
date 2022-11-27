@@ -79,7 +79,7 @@ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res)
     const description = req.body.description
     const planned = req.body.planned
     const isPower = req.body.isPower
-    const actor = req.actor
+    
     const length = req.body.length ?? 0
     const activity = req.body.activity
     let hrtss = null
@@ -648,6 +648,80 @@ router.delete('/:id', middleware.authenticateToken, async (req, res) => {
     }
     await workout.destroy()
     res.json({ success: true })
+  } catch (e) {
+    res.status(500).json({ message: e.message })
+  }
+})
+
+/**
+ * @swagger
+ * 
+ * /workouts/{id}/resync:
+ *  patch:
+ *    tags: [Workouts]
+ *    parameters:
+ *      - name: id
+ *        in: path
+ *        required: true
+ *        description: ID of the workout to resync
+ *        schema:
+ *           type: integer
+ *    summary: Resync activity with latest algorithm changes
+ *    responses:
+ *      '200':
+ *          description: A successful response
+ *      '401':
+ *          description: Not authenticated
+ *      '403':
+ *          description: Access token does not have the required scope
+ *      default:
+ *          description: Generic server error
+ */
+ router.patch('/:id/resync', [middleware.authenticateToken], async (req, res) => {
+  try {
+    const id = req.params.id
+    const light = req.query.light
+    const actor = req.actor
+    const workout = await Workout.findOne({
+      where: {
+        id: id
+      },
+      attributes: { exclude: light ? Workout.light() : [] }
+    })
+    if (!workout) {
+      return res.status(404).json({ message: 'Workout could not be found.' })
+    }
+    const streams = workout.streams
+    let normalizedPower = null
+    const duration = workout.duration
+    let tss = null
+    let hrtss = null
+    const activity = workout.activity
+    const length = workout.length
+    if (streams.watts?.data) {
+      normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
+    }
+    if ((normalizedPower && actor.threshold_power) || actor.running_threshold_pace) {
+      if (activity === 'run') {
+        const ngp = duration / (length * 0.000621371)
+        const intensityFactor = actor.running_threshold_pace / ngp
+        const numerator = (duration * actor.running_threshold_pace * intensityFactor)
+        const denominator = (ngp * 3600)
+        tss = Math.round((numerator / denominator) * 100)
+      } else {
+        tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+      }
+    }
+    if (streams?.heartrate?.data) {
+      hrtss = Workout.findHRTSS(actor, activity, streams.heartrate?.data)
+    }
+    if (tss) {
+      workout.effort = tss
+    } if (hrtss) {
+      workout.hr_effort = hrtss
+    }
+    await workout.save()
+    res.json(workout)
   } catch (e) {
     res.status(500).json({ message: e.message })
   }
