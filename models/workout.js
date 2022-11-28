@@ -59,6 +59,34 @@ clearSummaryCache = async function () {
   }
 }
 
+Workout.getStressScores = function ({ streams, activity, actor, duration, length }) {
+  let tss = null
+  let hrtss = null
+  let normalizedPower = null
+  if (streams.watts?.data) {
+    normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
+  }
+  if ((normalizedPower && actor.threshold_power) || actor.running_threshold_pace) {
+    if (activity === 'run') {
+      const ngp = duration / (length * 0.000621371)
+      const intensityFactor = actor.running_threshold_pace / ngp
+      const numerator = (duration * actor.running_threshold_pace * intensityFactor)
+      const denominator = (ngp * 3600)
+      tss = Math.round((numerator / denominator) * 100)
+    } else {
+      tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
+    }
+  }
+  if (streams?.heartrate?.data) {
+    hrtss = Workout.findHRTSS(actor, activity, streams.heartrate?.data)
+  }
+
+  return {
+    tss,
+    hrtss
+  }
+}
+
 interpolateStreams = function (streams) {
   if (streams.time) {
     const fitCount = streams.time.data[streams.time.data.length - 1]
@@ -75,11 +103,9 @@ interpolateStreams = function (streams) {
 
 
 
-Workout.createWorkout = async ({ actor, name, description, duration, length, source, source_id, started_at, normalizedPower, streams, activity, planned, is_completed = true, planned_hr_effort, planned_effort }) => {
+Workout.createWorkout = async ({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, planned, is_completed = true, planned_hr_effort, planned_effort }) => {
   let zones = null
   let bests = null
-  let hrtss = null
-  let tss = null
   const acceptableActivities = ['ride', 'workout' , 'run', 'swim']
   if (activity.includes('ride')) {
     activity = 'ride'
@@ -96,20 +122,7 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, hr_zones, actor.power_zones['ride'])
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
   }
-  if ((normalizedPower && actor.threshold_power) || actor.running_threshold_pace) {
-    if (activity === 'run') {
-      const ngp = duration / (length * 0.000621371)
-      const intensityFactor = actor.running_threshold_pace / ngp
-      const numerator = (duration * actor.running_threshold_pace * intensityFactor)
-      const denominator = (ngp * 3600)
-      tss = Math.round((numerator / denominator) * 100)
-    } else {
-      tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
-    }
-  }
-  if (streams?.heartrate?.data) {
-    hrtss = Workout.findHRTSS(actor, activity, streams.heartrate?.data)
-  }
+  const { tss, hrtss } = Workout.getStressScores({ streams, activity, actor, duration, length })
   if (planned_hr_effort) {
     hrtss = planned_hr_effort
   } else if (planned_effort) {

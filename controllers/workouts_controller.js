@@ -79,7 +79,7 @@ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res)
     const description = req.body.description
     const planned = req.body.planned
     const isPower = req.body.isPower
-    
+    const actor = req.actor
     const length = req.body.length ?? 0
     const activity = req.body.activity
     let hrtss = null
@@ -109,7 +109,7 @@ router.put('/update/planned/:id', middleware.authenticateToken, async (req, res)
     }
 
     //Update planned workout
-    let totalDuration = 0
+    let totalDuration = req.body.duration ?? 0
     const dataType = isPower ? 'watts' : 'heartrate'
     let streams = {
       'heartrate': null,
@@ -185,7 +185,7 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
     const length = req.body.length ?? 0
     const planned_hr_effort = req.body.hr_effort
     const planned_effort = req.body.effort
-    let duration = 0
+    let duration = req.body.duration ?? 0
     let streams = {}
     const source = 'planned'
     const is_completed = false
@@ -692,29 +692,10 @@ router.delete('/:id', middleware.authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Workout could not be found.' })
     }
     const streams = workout.streams
-    let normalizedPower = null
     const duration = workout.duration
-    let tss = null
-    let hrtss = null
     const activity = workout.activity
     const length = workout.length
-    if (streams.watts?.data) {
-      normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
-    }
-    if ((normalizedPower && actor.threshold_power) || actor.running_threshold_pace) {
-      if (activity === 'run') {
-        const ngp = duration / (length * 0.000621371)
-        const intensityFactor = actor.running_threshold_pace / ngp
-        const numerator = (duration * actor.running_threshold_pace * intensityFactor)
-        const denominator = (ngp * 3600)
-        tss = Math.round((numerator / denominator) * 100)
-      } else {
-        tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
-      }
-    }
-    if (streams?.heartrate?.data) {
-      hrtss = Workout.findHRTSS(actor, activity, streams.heartrate?.data)
-    }
+    const { tss, hrtss } = Workout.getStressScores({ streams, activity, actor, duration, length })
     if (tss) {
       workout.effort = tss
     } if (hrtss) {
