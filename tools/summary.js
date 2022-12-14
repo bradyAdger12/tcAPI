@@ -78,6 +78,9 @@ getSummary = async function (actor, startDate, endDate) {
     }
     else if (workout.activity == 'workout') {
       summary['activity_duration']['workout'] += workout.duration
+    } 
+    else if (workout.activity == 'swim') {
+      summary['activity_duration']['swim'] += workout.duration
     }
 
     //Add Distance
@@ -87,6 +90,9 @@ getSummary = async function (actor, startDate, endDate) {
     }
     else if (workout.activity == 'ride') {
       summary['activity_distance']['ride'] += workout.length
+    }
+    else if (workout.activity == 'swim') {
+      summary['activity_distance']['swim'] += workout.length
     }
     summary['workoutIds'].push(workout.id)
   }
