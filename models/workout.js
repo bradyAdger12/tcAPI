@@ -73,7 +73,7 @@ Workout.getStressScores = function ({ streams, activity, actor, duration, length
       const numerator = (duration * actor.running_threshold_pace * intensityFactor)
       const denominator = (ngp * 3600)
       tss = Math.round((numerator / denominator) * 100)
-    } else {
+    } else if(activity === 'ride') {
       tss = Math.round(((duration * (normalizedPower * (normalizedPower / actor.threshold_power)) / (actor.threshold_power * 3600))) * 100)
     }
   }
@@ -122,12 +122,14 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, hr_zones, actor.power_zones['ride'])
     bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
   }
-  const { tss, hrtss } = Workout.getStressScores({ streams, activity, actor, duration, length })
+  let { tss, hrtss } = Workout.getStressScores({ streams, activity, actor, duration, length })
   if (planned_hr_effort) {
     hrtss = planned_hr_effort
   } else if (planned_effort) {
     tss = planned_effort
   }
+
+  console.log(planned_hr_effort)
   //Check if workout already exists in DB
   const workout = await Workout.findOne({
     where: {
