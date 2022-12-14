@@ -10,6 +10,7 @@ const moment = require('moment')
 const getSummary = require('../tools/summary.js')
 const cache = require('../cache.js')
 const SavedWorkout = require('../models/savedworkout')
+const { parse } = require('pg-protocol')
 
 // Workouts routes
 
@@ -206,9 +207,10 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
     }
     streams[dataType] = {}
     streams[dataType]['data'] = []
-    for (const block of planned) {
+    for (const block of JSON.parse(JSON.stringify(planned))) {
       for (let i = 0; i < block.numSets; i++) {
         for (const set of block.sets) {
+          set.value = set.value * actor.threshold_power
           const d = moment.duration(set.duration).asSeconds()
           for (let sec = 0; sec < d; sec++) {
             streams[dataType]?.data.push(parseInt(set.value.toString()))

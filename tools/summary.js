@@ -2,7 +2,7 @@ const Workout = require('../models/workout.js')
 const { Op } = require('sequelize')
 const moment = require('moment')
 getSummary = async function (actor, startDate, endDate) {
-  const validActivities = ['run', 'bike']
+  const validActivities = ['run', 'bike', 'swim']
   let workouts = await Workout.findAll({
     order: [
       ['started_at', 'DESC']],
@@ -23,12 +23,14 @@ getSummary = async function (actor, startDate, endDate) {
     'activity_duration': {
       'run': 0,
       'ride': 0,
-      'workout': 0
+      'workout': 0,
+      'swim': 0
     },
     'total_distance': 0,
     'activity_distance': {
       'run': 0,
-      'ride': 0
+      'ride': 0,
+      'swim': 0
     },
     'fitness': 0,
     'fatigue': 0,
