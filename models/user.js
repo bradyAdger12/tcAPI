@@ -53,6 +53,7 @@ User.prototype.getPRs = function (workoutBests) {
 User.getHeartRateZones = function (max_hr, thresh_hr) {
   let cycling_hr_zones = []
   let running_hr_zones = []
+  let swimming_hr_zones = []
   if (thresh_hr) {
     cycling_hr_zones = [
       { title: 'Recovery', low: 0, high: Math.round(thresh_hr * .68) },
@@ -70,11 +71,19 @@ User.getHeartRateZones = function (max_hr, thresh_hr) {
       { title: 'Threshold', low: Math.round(max_hr * .87) + 1, high: Math.round(max_hr * .93) },
       { title: 'VO2 Max', low: Math.round(max_hr * .93) + 1, high: max_hr }
     ]
+    swimming_hr_zones = [
+      { title: 'Recovery', low: 0, high: Math.round(max_hr * .72) },
+      { title: 'Endurance', low: Math.round(max_hr * .72) + 1, high: Math.round(max_hr * .80) },
+      { title: 'Tempo', low: Math.round(max_hr * .80) + 1, high: Math.round(max_hr * .87) },
+      { title: 'Threshold', low: Math.round(max_hr * .87) + 1, high: Math.round(max_hr * .93) },
+      { title: 'VO2 Max', low: Math.round(max_hr * .93) + 1, high: max_hr }
+    ]
   }
 
   return {
     ride: cycling_hr_zones,
-    run: running_hr_zones
+    run: running_hr_zones,
+    swim: swimming_hr_zones
   }
 }
 User.getPowerZones = function (thresh_power) {
