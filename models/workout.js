@@ -276,8 +276,8 @@ Workout.getTrainingLoad = async function (actor, date, daysToInclude = 42) {
         }
       }
       // (1/7) x (1-1/7)^1 = 12.2%
-      const weight = ((1 / daysToInclude) * Math.pow((1 - (1 / daysToInclude)), daysToInclude - count))
-      trainingLoad += todaysEffort * (1 - weight)
+      // const weight = ((1 / daysToInclude) * Math.pow((1 - (1 / daysToInclude)), count))
+      trainingLoad += todaysEffort
       todaysEffort = 0
       start.add(1, 'days')
       count += 1
