@@ -128,8 +128,6 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
   } else if (planned_effort) {
     tss = planned_effort
   }
-
-  console.log(planned_hr_effort)
   //Check if workout already exists in DB
   const workout = await Workout.findOne({
     where: {

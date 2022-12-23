@@ -210,7 +210,6 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
     for (const block of JSON.parse(JSON.stringify(planned))) {
       for (let i = 0; i < block.numSets; i++) {
         for (const set of block.sets) {
-          set.value = set.value * actor.threshold_power
           const d = moment.duration(set.duration).asSeconds()
           for (let sec = 0; sec < d; sec++) {
             streams[dataType]?.data.push(parseInt(set.value.toString()))
@@ -221,6 +220,7 @@ router.post('/create/planned', middleware.authenticateToken, async (req, res) =>
 
       normalizedPower = Workout.getNormalizedPower(streams.watts?.data)
     }
+    console.log(streams)
     const plannedWorkout = await Workout.createWorkout({ actor, name, description, duration, length, source, source_id, started_at, streams, activity, normalizedPower, planned, is_completed, planned_hr_effort, planned_effort })
 
     res.json(plannedWorkout)
