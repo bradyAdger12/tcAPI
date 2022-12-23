@@ -120,7 +120,9 @@ Workout.createWorkout = async ({ actor, name, description, duration, length, sou
     streams = interpolateStreams(streams)
     const hr_zones = actor.hr_zones[activity]
     zones = Workout.buildZoneDistribution(streams.watts?.data, streams.heartrate?.data, hr_zones, actor.power_zones['ride'])
-    bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
+    if (is_completed) {
+      bests = Workout.getBests(actor, streams.heartrate?.data, streams.watts?.data)
+    }
   }
   let { tss, hrtss } = Workout.getStressScores({ streams, activity, actor, duration, length })
   if (planned_hr_effort) {
